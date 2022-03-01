@@ -1,0 +1,73 @@
+domain: k8s.webcenter.fr
+layout:
+- go.kubebuilder.io/v3
+plugins:
+  manifests.sdk.operatorframework.io/v2: {}
+  scorecard.sdk.operatorframework.io/v2: {}
+projectName: operator-elk-extra
+repo: github.com/disaster37/operator-elk-extra
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: k8s.webcenter.fr
+  group: elk
+  kind: License
+  path: github.com/disaster37/operator-elk-extra/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: k8s.webcenter.fr
+  group: elk
+  kind: ElasticsearchILM
+  path: github.com/disaster37/operator-elk-extra/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: k8s.webcenter.fr
+  group: elk
+  kind: ElasticsearchSLM
+  path: github.com/disaster37/operator-elk-extra/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: k8s.webcenter.fr
+  group: elk
+  kind: ElasticsearchIndexTemplate
+  path: github.com/disaster37/operator-elk-extra/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: k8s.webcenter.fr
+  group: elk
+  kind: ElasticsearchComponentTemplate
+  path: github.com/disaster37/operator-elk-extra/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: k8s.webcenter.fr
+  group: elk
+  kind: ElasticsearchSnapshotRepository
+  path: github.com/disaster37/operator-elk-extra/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: k8s.webcenter.fr
+  group: elk
+  kind: ElasticsearchWatcher
+  path: github.com/disaster37/operator-elk-extra/api/v1alpha1
+  version: v1alpha1
+version: "3"

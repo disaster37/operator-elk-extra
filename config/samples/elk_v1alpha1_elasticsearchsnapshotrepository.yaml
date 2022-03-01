@@ -1,0 +1,6 @@
+apiVersion: elk.k8s.webcenter.fr/v1alpha1
+kind: ElasticsearchSnapshotRepository
+metadata:
+  name: elasticsearchsnapshotrepository-sample
+spec:
+  # TODO(user): Add fields here

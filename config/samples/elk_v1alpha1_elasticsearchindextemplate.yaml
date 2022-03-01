@@ -1,0 +1,6 @@
+apiVersion: elk.k8s.webcenter.fr/v1alpha1
+kind: ElasticsearchIndexTemplate
+metadata:
+  name: elasticsearchindextemplate-sample
+spec:
+  # TODO(user): Add fields here

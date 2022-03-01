@@ -1,0 +1,6 @@
+apiVersion: elk.k8s.webcenter.fr/v1alpha1
+kind: ElasticsearchWatcher
+metadata:
+  name: elasticsearchwatcher-sample
+spec:
+  # TODO(user): Add fields here

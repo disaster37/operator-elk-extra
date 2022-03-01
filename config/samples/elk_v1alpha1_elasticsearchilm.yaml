@@ -1,0 +1,6 @@
+apiVersion: elk.k8s.webcenter.fr/v1alpha1
+kind: ElasticsearchILM
+metadata:
+  name: elasticsearchilm-sample
+spec:
+  # TODO(user): Add fields here
