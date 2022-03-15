@@ -20,22 +20,29 @@ import (
 	"context"
 
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	elkv1alpha1 "github.com/disaster37/operator-elk-extra/api/v1alpha1"
+	"github.com/disaster37/operator-elk-extra/pkg/services"
+	"github.com/sirupsen/logrus"
 )
 
 // LicenseReconciler reconciles a License object
 type LicenseReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme   *runtime.Scheme
+	Recorder record.EventRecorder
+	Log      *logrus.Entry
+	Service  services.LicenseService
 }
 
 //+kubebuilder:rbac:groups=elk.k8s.webcenter.fr,resources=licenses,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=elk.k8s.webcenter.fr,resources=licenses/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=elk.k8s.webcenter.fr,resources=licenses/finalizers,verbs=update
+//+kubebuilder:rbac:groups=,resources=secrets,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
