@@ -35,28 +35,33 @@ spec:
           spec:
             description: LicenseSpec defines the desired state of License
             properties:
-              elasticsearchExternalRef:
-                description: ElasticsearchExternalRef is the elasticsearch external
-                  reference to connect on it (not managed by ECK)
-                properties:
-                  secretName:
-                    description: 'SecretName is the secret that contain the setting
-                      to connect on Elasticsearch that is not managed by ECK. It need
-                      to contain the following keys: hosts, username, password, slefSignedCertificate'
-                    type: string
-                type: object
               elasticsearchRef:
-                description: ElasticsearchRef is the Elasticsearch reference to connect
-                  on it (managed by ECK)
                 properties:
-                  name:
-                    description: Name is the Elasticsearch name object
-                    type: string
+                  externalRef:
+                    description: ElasticsearchExternalRef is the elasticsearch external
+                      reference to connect on it (not managed by ECK)
+                    properties:
+                      addresses:
+                        description: Addresses is the list of Elasticsearch addresses
+                        items:
+                          type: string
+                        type: array
+                      secretName:
+                        description: SecretName is the secret that contain the setting
+                          to connect on Elasticsearch that is not managed by ECK.
+                          It need to contain only one entry. The user is the key,
+                          and the password is the data
+                        type: string
+                    type: object
+                  ref:
+                    description: ElasticsearchRef is the Elasticsearch reference to
+                      connect on it (managed by ECK)
+                    properties:
+                      name:
+                        description: Name is the Elasticsearch name object
+                        type: string
+                    type: object
                 type: object
-              key:
-                description: Key is the key on secret that contain the lisence on
-                  JSON format
-                type: string
               secretName:
                 description: SecretName is the secret that contain the license
                 type: string

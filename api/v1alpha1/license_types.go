@@ -18,10 +18,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
-
-const licenseFinalizer = "license.elk.k8s.webcenter.fr/finalizer"
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
@@ -32,16 +29,10 @@ type LicenseSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
+	ElasticsearchRefererStd `json:"elasticsearchRef,omitempty"`
+
 	// SecretName is the secret that contain the license
 	SecretName string `json:"secretName,omitempty"`
-
-	// ElasticsearchRef is the Elasticsearch reference to connect on it (managed by ECK)
-	// +optional
-	ElasticsearchRef *ElasticsearchRefSpec `json:"elasticsearchRef,omitempty"`
-
-	//ElasticsearchExternalRef is the elasticsearch external reference to connect on it (not managed by ECK)
-	// +optional
-	ElasticsearchExternalRef *ElasticsearchExternalRefSpec `json:"elasticsearchExternalRef,omitempty"`
 }
 
 // LicenseStatus defines the observed state of License
@@ -76,27 +67,7 @@ func init() {
 	SchemeBuilder.Register(&License{}, &LicenseList{})
 }
 
-// IsBeingDeleted returns true if a deletion timestamp is set
-func (h *License) IsBeingDeleted() bool {
-	return !h.ObjectMeta.DeletionTimestamp.IsZero()
-}
-
-// HasFinalizer returns true if the item has the specified finalizer
-func (h *License) HasFinalizer() bool {
-	return controllerutil.ContainsFinalizer(h, licenseFinalizer)
-}
-
-// IsSubmitted return true if service has been submitted to Centreon
-func (h *License) IsSubmitted() bool {
-	return h.Status.LicenseType != ""
-}
-
-// AddFinalizer adds the specified finalizer
-func (h *License) AddFinalizer() {
-	controllerutil.AddFinalizer(h, licenseFinalizer)
-}
-
-// RemoveFinalizer removes the specified finalizer
-func (h *License) RemoveFinalizer() {
-	controllerutil.RemoveFinalizer(h, licenseFinalizer)
+// GetObjectMeta permit to get the current ObjectMeta
+func (h *License) GetObjectMeta() metav1.ObjectMeta {
+	return h.ObjectMeta
 }

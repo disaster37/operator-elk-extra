@@ -28,17 +28,22 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	elkv1alpha1 "github.com/disaster37/operator-elk-extra/api/v1alpha1"
 	"github.com/disaster37/operator-elk-extra/controllers"
+	"github.com/disaster37/operator-elk-extra/pkg/helpers"
+	"github.com/sirupsen/logrus"
 	//+kubebuilder:scaffold:imports
 )
 
 var (
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
+	version  = "develop"
+	commit   = ""
 )
 
 func init() {
@@ -64,6 +69,36 @@ func main() {
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+	log := logrus.New()
+	log.SetLevel(getLogrusLogLevel())
+
+	watchNamespace, err := getWatchNamespace()
+	var namespace string
+	var multiNamespacesCached cache.NewCacheFunc
+
+	if err != nil {
+		setupLog.Info("WATCH_NAMESPACES env variable not setted, the manager will watch and manage resources in all namespaces")
+	} else {
+		setupLog.Info("Manager look only resources on namespaces %s", watchNamespace)
+		watchNamespaces := helpers.StringToSlice(watchNamespace, ",")
+		if len(watchNamespaces) == 1 {
+			namespace = watchNamespace
+		} else {
+			multiNamespacesCached = cache.MultiNamespacedCacheBuilder(watchNamespaces)
+		}
+
+	}
+
+	printVersion(ctrl.Log, metricsAddr, probeAddr)
+	log.Infof("monitoring-operator version: %s - %s", version, commit)
+
+	cfg := ctrl.GetConfigOrDie()
+	timeout, err := getKubeClientTimeout()
+	if err != nil {
+		setupLog.Error(err, "KUBE_CLIENT_TIMEOUT must be a valid duration: %s", err.Error())
+		os.Exit(1)
+	}
+	cfg.Timeout = timeout
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
@@ -72,16 +107,23 @@ func main() {
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "9275a4fc.k8s.webcenter.fr",
+		Namespace:              namespace,
+		NewCache:               multiNamespacesCached,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
 
-	if err = (&controllers.LicenseReconciler{
+	licenseController := &controllers.LicenseReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
+	}
+	licenseController.SetLogger(log.WithFields(logrus.Fields{
+		"type": "LicenseController",
+	}))
+	licenseController.SetRecorder(mgr.GetEventRecorderFor("license-controller"))
+	if err = licenseController.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "License")
 		os.Exit(1)
 	}

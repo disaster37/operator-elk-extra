@@ -148,6 +148,10 @@ func (h *ElasticsearchHandlerImpl) LicenseGet() (license *olivere.XPackInfoLicen
 // It only compare the UID if expected is not basic license
 func (h *ElasticsearchHandlerImpl) LicenseDiff(actual, expected *olivere.XPackInfoLicense) (isDiff bool) {
 
+	if actual == nil {
+		return true
+	}
+
 	// Don't check UID is basic license
 	if expected.Type == "basic" {
 		return actual.Type != expected.Type

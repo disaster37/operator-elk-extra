@@ -1,8 +1,6 @@
 package v1alpha1
 
 import (
-	"time"
-
 	"github.com/disaster37/operator-elk-extra/pkg/helpers"
 	"github.com/stretchr/testify/assert"
 
@@ -31,8 +29,10 @@ func (t *V1alpha1TestSuite) TestLicenseCRUD() {
 		},
 		Spec: LicenseSpec{
 			SecretName: "test",
-			ElasticsearchRef: &ElasticsearchRefSpec{
-				Name: "test",
+			ElasticsearchRefererStd: ElasticsearchRefererStd{
+				ElasticsearchRef: &ElasticsearchRefSpec{
+					Name: "test",
+				},
 			},
 		},
 	}
@@ -50,35 +50,4 @@ func (t *V1alpha1TestSuite) TestLicenseCRUD() {
 	assert.NoError(t.T(), err)
 	err = t.k8sClient.Get(context.Background(), key, created)
 	assert.Error(t.T(), err)
-}
-
-func (t *V1alpha1TestSuite) TestLicenseIsSubmitted() {
-	license := &License{}
-	assert.False(t.T(), license.IsSubmitted())
-
-	license.Status.LicenseType = "basic"
-	assert.True(t.T(), license.IsSubmitted())
-}
-
-func (t *V1alpha1TestSuite) TestLicenseIsBeingDeleted() {
-	license := &License{
-		ObjectMeta: metav1.ObjectMeta{
-			DeletionTimestamp: &metav1.Time{
-				Time: time.Now(),
-			},
-		},
-	}
-	assert.True(t.T(), license.IsBeingDeleted())
-}
-
-func (t *V1alpha1TestSuite) TestLicenseFinalizer() {
-	license := &License{}
-
-	license.AddFinalizer()
-	assert.Equal(t.T(), 1, len(license.GetFinalizers()))
-	assert.True(t.T(), license.HasFinalizer())
-
-	license.RemoveFinalizer()
-	assert.Equal(t.T(), 0, len(license.GetFinalizers()))
-	assert.False(t.T(), license.HasFinalizer())
 }
