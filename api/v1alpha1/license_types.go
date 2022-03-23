@@ -40,9 +40,9 @@ type LicenseSpec struct {
 
 // LicenseStatus defines the observed state of License
 type LicenseStatus struct {
-	LicenseType string             `json:"licenseType,omitempty"`
-	ExpireAt    string             `json:"expireAt,omitempty"`
-	LicenseHash string             `json:"licenseHash,omitempty"`
+	LicenseType string             `json:"licenseType"`
+	ExpireAt    string             `json:"expireAt"`
+	LicenseHash string             `json:"licenseHash"`
 	Conditions  []metav1.Condition `json:"conditions"`
 }
 

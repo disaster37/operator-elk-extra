@@ -151,12 +151,12 @@ func (r *LicenseReconciler) Read(ctx context.Context, resource resource.Resource
 			r.recorder.Eventf(resource, core.EventTypeWarning, "Failed", "License contend is invalid: %s", err.Error())
 			return res, err
 		}
-		expectedLicense := &olivere.XPackInfoLicense{}
+		expectedLicense := &olivere.XPackInfoServiceResponse{}
 		if err = json.Unmarshal(licenseB, expectedLicense); err != nil {
 			r.recorder.Eventf(resource, core.EventTypeWarning, "Failed", "License contend is invalid: %s", err.Error())
 			return res, err
 		}
-		data["expectedLicense"] = expectedLicense
+		data["expectedLicense"] = &expectedLicense.License
 		data["rawLicense"] = string(licenseB)
 	}
 
@@ -198,6 +198,8 @@ func (r *LicenseReconciler) Create(ctx context.Context, resource resource.Resour
 		r.log.Info("Successfully enable basic license")
 		r.recorder.Event(resource, core.EventTypeNormal, "Completed", "Enable basic license")
 		license.Status.LicenseType = "basic"
+		license.Status.ExpireAt = ""
+		license.Status.LicenseHash = ""
 
 	} else {
 		// Enterprise license
@@ -253,7 +255,6 @@ func (r *LicenseReconciler) Delete(ctx context.Context, resource resource.Resour
 		}
 		r.log.Info("Successfully downgrade to basic license")
 		r.recorder.Event(resource, core.EventTypeNormal, "Completed", "Downgrade to basic license")
-
 	}
 
 	return nil
