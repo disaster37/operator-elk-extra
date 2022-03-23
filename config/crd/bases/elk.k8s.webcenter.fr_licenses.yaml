@@ -35,6 +35,9 @@ spec:
           spec:
             description: LicenseSpec defines the desired state of License
             properties:
+              basic:
+                description: Basic permit to enable basic license
+                type: boolean
               elasticsearchRef:
                 properties:
                   externalRef:
@@ -138,6 +141,8 @@ spec:
                   type: object
                 type: array
               expireAt:
+                type: string
+              licenseHash:
                 type: string
               licenseType:
                 type: string

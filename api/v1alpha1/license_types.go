@@ -33,12 +33,16 @@ type LicenseSpec struct {
 
 	// SecretName is the secret that contain the license
 	SecretName string `json:"secretName,omitempty"`
+
+	// Basic permit to enable basic license
+	Basic *bool `json:"basic,omitempty"`
 }
 
 // LicenseStatus defines the observed state of License
 type LicenseStatus struct {
 	LicenseType string             `json:"licenseType,omitempty"`
 	ExpireAt    string             `json:"expireAt,omitempty"`
+	LicenseHash string             `json:"licenseHash,omitempty"`
 	Conditions  []metav1.Condition `json:"conditions"`
 }
 
@@ -70,4 +74,9 @@ func init() {
 // GetObjectMeta permit to get the current ObjectMeta
 func (h *License) GetObjectMeta() metav1.ObjectMeta {
 	return h.ObjectMeta
+}
+
+// GetStatus permit to get the current status
+func (h *License) GetStatus() any {
+	return h.Status
 }

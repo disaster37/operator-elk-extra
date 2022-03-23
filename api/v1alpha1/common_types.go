@@ -25,10 +25,10 @@ type ElasticsearchRefererStd struct {
 	ElasticsearchExternalRef *ElasticsearchExternalRefSpec `json:"externalRef,omitempty"`
 }
 
-func (h *ElasticsearchRefererStd) GetElasticsearchRef() ElasticsearchRefSpec {
-	return *h.ElasticsearchRef
+func (h *ElasticsearchRefererStd) GetElasticsearchRef() *ElasticsearchRefSpec {
+	return h.ElasticsearchRef
 }
 
-func (h *ElasticsearchRefererStd) GetElasticsearchExternalRef() ElasticsearchExternalRefSpec {
-	return *h.ElasticsearchExternalRef
+func (h *ElasticsearchRefererStd) GetElasticsearchExternalRef() *ElasticsearchExternalRefSpec {
+	return h.ElasticsearchExternalRef
 }
