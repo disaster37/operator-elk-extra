@@ -18,7 +18,7 @@ type ElasticsearchHandler interface {
 	ILMUpdate(name, rawPolicy string) (err error)
 	ILMDelete(name string) (err error)
 	ILMGet(name string) (policy map[string]any, err error)
-	ILMDiff(actual, expected map[string]any) (diff bool, explain string)
+	ILMDiff(actual, expected map[string]any) (diff string, err error)
 
 	SetLogger(log *logrus.Entry)
 }
