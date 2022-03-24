@@ -27,8 +27,8 @@ const (
 )
 
 type ElasticsearchReferer interface {
-	GetElasticsearchRef() *elkv1alpha1.ElasticsearchRefSpec
-	GetElasticsearchExternalRef() *elkv1alpha1.ElasticsearchExternalRefSpec
+	GetElasticsearchRef() elkv1alpha1.ElasticsearchRefSpec
+	IsManagedByECK() bool
 }
 
 func GetElasticsearchHandler(ctx context.Context, resource ElasticsearchReferer, client client.Client, req ctrl.Request, log *logrus.Entry) (esHandler elasticsearchhandler.ElasticsearchHandler, err error) {
@@ -37,7 +37,7 @@ func GetElasticsearchHandler(ctx context.Context, resource ElasticsearchReferer,
 	secretName := ""
 	hosts := []string{}
 	selfSignedCertificate := false
-	if resource.GetElasticsearchRef() != nil && resource.GetElasticsearchRef().Name != "" {
+	if resource.IsManagedByECK() {
 		// From Elasticsearch resource
 		elasticsearch := &es.Elasticsearch{}
 		elasticsearchNs := types.NamespacedName{
@@ -63,9 +63,9 @@ func GetElasticsearchHandler(ctx context.Context, resource ElasticsearchReferer,
 			selfSignedCertificate = true
 		}
 
-	} else if resource.GetElasticsearchExternalRef() != nil && resource.GetElasticsearchExternalRef().SecretName != "" {
-		secretName = resource.GetElasticsearchExternalRef().SecretName
-		hosts = resource.GetElasticsearchExternalRef().Addresses
+	} else if len(resource.GetElasticsearchRef().Addresses) > 0 && resource.GetElasticsearchRef().SecretName != "" {
+		secretName = resource.GetElasticsearchRef().SecretName
+		hosts = resource.GetElasticsearchRef().Addresses
 	} else {
 		log.Error("You must set the way to connect on Elasticsearch")
 		return nil, errors.New("You must set the way to connect on Elasticsearch")

@@ -126,7 +126,7 @@ func (r *LicenseReconciler) Read(ctx context.Context, resource resource.Resource
 	}
 
 	// Read license contend from secret if not basic
-	if license.Spec.Basic == nil || !*license.Spec.Basic {
+	if !license.Spec.Basic {
 		secret := &core.Secret{}
 		secretNS := types.NamespacedName{
 			Namespace: license.Namespace,
@@ -190,7 +190,7 @@ func (r *LicenseReconciler) Create(ctx context.Context, resource resource.Resour
 	}()
 
 	// Basic license
-	if license.Spec.Basic != nil && *license.Spec.Basic {
+	if license.Spec.Basic {
 		if err = esHandler.LicenseEnableBasic(); err != nil {
 			r.recorder.Eventf(resource, core.EventTypeWarning, "Failed", "Error when activate basic license: %s", err.Error())
 			return res, err
@@ -248,7 +248,7 @@ func (r *LicenseReconciler) Delete(ctx context.Context, resource resource.Resour
 
 	// Not delete License
 	// If enterprise license, it must enable basic license instead
-	if license.Spec.Basic == nil || !*license.Spec.Basic {
+	if !license.Spec.Basic {
 		if err = esHandler.LicenseEnableBasic(); err != nil {
 			r.recorder.Eventf(resource, core.EventTypeWarning, "Failed", "Error when downgrade to basic license: %s", err.Error())
 			return err
@@ -269,7 +269,7 @@ func (r *LicenseReconciler) Diff(resource resource.Resource, data map[string]int
 	var expectedLicense *olivere.XPackInfoLicense
 	var d any
 
-	if license.Spec.Basic != nil && *license.Spec.Basic {
+	if license.Spec.Basic {
 		expectedLicense = &olivere.XPackInfoLicense{
 			Type: "basic",
 		}

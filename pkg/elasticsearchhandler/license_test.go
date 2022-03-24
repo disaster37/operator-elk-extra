@@ -1,16 +1,18 @@
 package elasticsearchhandler
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
 
+	"github.com/jarcoal/httpmock"
 	olivere "github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/assert"
 )
 
-func (t *ElasticsearchHandlerTestSuite) TestLicenseGet() {
+var urlLicense = fmt.Sprintf("%s/_license", baseURL)
 
-	mock := &MockTransport{}
-	esHandler := GetMockElasticsearchHandler(mock)
+func (t *ElasticsearchHandlerTestSuite) TestLicenseGet() {
 
 	// Normale use case
 	result := &olivere.XPackInfoServiceResponse{
@@ -19,9 +21,17 @@ func (t *ElasticsearchHandlerTestSuite) TestLicenseGet() {
 			Type: "basic",
 		},
 	}
-	mock.SetResponse(http.StatusOK, result, false)
 
-	license, err := esHandler.LicenseGet()
+	httpmock.RegisterResponder("GET", urlLicense, func(req *http.Request) (*http.Response, error) {
+		resp, err := httpmock.NewJsonResponse(200, result)
+		if err != nil {
+			panic(err)
+		}
+		SetHeaders(resp)
+		return resp, nil
+	})
+
+	license, err := t.esHandler.LicenseGet()
 	if err != nil {
 		t.Fail(err.Error())
 	}
@@ -29,79 +39,97 @@ func (t *ElasticsearchHandlerTestSuite) TestLicenseGet() {
 	assert.Equal(t.T(), "basic", license.Type)
 
 	// When error
-	mock.SetResponse(http.StatusOK, result, true)
-	license, err = esHandler.LicenseGet()
+	httpmock.RegisterResponder("GET", urlLicense, httpmock.NewErrorResponder(errors.New("fack error")))
+	license, err = t.esHandler.LicenseGet()
 	assert.Error(t.T(), err)
 }
 
 func (t *ElasticsearchHandlerTestSuite) TestLicenseDelete() {
 
-	mock := &MockTransport{}
-	esHandler := GetMockElasticsearchHandler(mock)
-
 	// Normale use case
-	mock.SetResponse(http.StatusOK, map[string]string{}, false)
+	httpmock.RegisterResponder("DELETE", urlLicense, func(req *http.Request) (*http.Response, error) {
+		resp := httpmock.NewStringResponse(200, "")
+		SetHeaders(resp)
+		return resp, nil
+	})
 
-	err := esHandler.LicenseDelete()
+	err := t.esHandler.LicenseDelete()
 	if err != nil {
 		t.Fail(err.Error())
 	}
 	// When error
-	mock.SetResponse(http.StatusOK, map[string]string{}, true)
-	err = esHandler.LicenseDelete()
+	httpmock.RegisterResponder("DELETE", urlLicense, httpmock.NewErrorResponder(errors.New("Fake error")))
+	err = t.esHandler.LicenseDelete()
 	assert.Error(t.T(), err)
 }
 
 func (t *ElasticsearchHandlerTestSuite) TestLicenseUpdate() {
 
-	mock := &MockTransport{}
-	esHandler := GetMockElasticsearchHandler(mock)
-
 	// Normale use case
-	mock.SetResponse(http.StatusOK, map[string]string{}, false)
+	httpmock.RegisterResponder("PUT", urlLicense, func(req *http.Request) (*http.Response, error) {
+		resp := httpmock.NewStringResponse(200, "")
+		SetHeaders(resp)
+		return resp, nil
+	})
 
-	err := esHandler.LicenseUpdate("fake license")
+	err := t.esHandler.LicenseUpdate("fake license")
 	if err != nil {
 		t.Fail(err.Error())
 	}
 
 	// When error
-	mock.SetResponse(http.StatusOK, map[string]string{}, true)
-	err = esHandler.LicenseUpdate("fake license")
+	httpmock.RegisterResponder("PUT", urlLicense, httpmock.NewErrorResponder(errors.New("Fake error")))
+	err = t.esHandler.LicenseUpdate("fake license")
 	assert.Error(t.T(), err)
 }
 
 func (t *ElasticsearchHandlerTestSuite) TestLicenseEnableBasic() {
 
-	mock := &MockTransport{}
-	esHandler := GetMockElasticsearchHandler(mock)
-
 	// Normale use case
-	mock.SetResponse(http.StatusOK, map[string]interface{}{"eligible_to_start_basic": true}, false)
+	httpmock.RegisterResponder("GET", fmt.Sprintf("%s/basic_status", urlLicense), func(req *http.Request) (*http.Response, error) {
+		resp := httpmock.NewStringResponse(200, `{"eligible_to_start_basic": true}`)
+		SetHeaders(resp)
+		return resp, nil
+	})
+	httpmock.RegisterResponder("POST", fmt.Sprintf("%s/start_basic", urlLicense), func(req *http.Request) (*http.Response, error) {
+		resp := httpmock.NewStringResponse(200, "")
+		SetHeaders(resp)
+		return resp, nil
+	})
 
-	err := esHandler.LicenseEnableBasic()
+	err := t.esHandler.LicenseEnableBasic()
 	if err != nil {
 		t.Fail(err.Error())
 	}
 
-	// Nor eligible
-	mock.SetResponse(http.StatusOK, map[string]interface{}{"eligible_to_start_basic": false}, false)
-
-	err = esHandler.LicenseEnableBasic()
+	// Not eligible
+	httpmock.RegisterResponder("GET", fmt.Sprintf("%s/basic_status", urlLicense), func(req *http.Request) (*http.Response, error) {
+		resp := httpmock.NewStringResponse(200, `{"eligible_to_start_basic": false}`)
+		SetHeaders(resp)
+		return resp, nil
+	})
+	httpmock.RegisterResponder("POST", fmt.Sprintf("%s/start_basic", urlLicense), func(req *http.Request) (*http.Response, error) {
+		resp := httpmock.NewStringResponse(200, "")
+		SetHeaders(resp)
+		return resp, nil
+	})
+	err = t.esHandler.LicenseEnableBasic()
 	if err != nil {
 		t.Fail(err.Error())
 	}
 
 	// When error
-	mock.SetResponse(http.StatusOK, map[string]string{}, true)
-	err = esHandler.LicenseEnableBasic()
+	httpmock.RegisterResponder("GET", fmt.Sprintf("%s/basic_status", urlLicense), func(req *http.Request) (*http.Response, error) {
+		resp := httpmock.NewStringResponse(200, `{"eligible_to_start_basic": true}`)
+		SetHeaders(resp)
+		return resp, nil
+	})
+	httpmock.RegisterResponder("POST", fmt.Sprintf("%s/start_basic", urlLicense), httpmock.NewErrorResponder(errors.New("fake error")))
+	err = t.esHandler.LicenseEnableBasic()
 	assert.Error(t.T(), err)
 }
 
 func (t *ElasticsearchHandlerTestSuite) TestLicenseDiff() {
-
-	mock := &MockTransport{}
-	esHandler := GetMockElasticsearchHandler(mock)
 
 	// No diff, same UID and not basic
 	actual := &olivere.XPackInfoLicense{
@@ -113,7 +141,7 @@ func (t *ElasticsearchHandlerTestSuite) TestLicenseDiff() {
 		Type: "gold",
 	}
 
-	assert.False(t.T(), esHandler.LicenseDiff(actual, new))
+	assert.False(t.T(), t.esHandler.LicenseDiff(actual, new))
 
 	// No diff, basic license
 	actual = &olivere.XPackInfoLicense{
@@ -124,7 +152,7 @@ func (t *ElasticsearchHandlerTestSuite) TestLicenseDiff() {
 		UID:  "test2",
 		Type: "basic",
 	}
-	assert.False(t.T(), esHandler.LicenseDiff(actual, new))
+	assert.False(t.T(), t.esHandler.LicenseDiff(actual, new))
 
 	// Diff, not same id and not basic
 	actual = &olivere.XPackInfoLicense{
@@ -135,7 +163,7 @@ func (t *ElasticsearchHandlerTestSuite) TestLicenseDiff() {
 		UID:  "test2",
 		Type: "gold",
 	}
-	assert.True(t.T(), esHandler.LicenseDiff(actual, new))
+	assert.True(t.T(), t.esHandler.LicenseDiff(actual, new))
 
 	// Diff, not same license type
 	actual = &olivere.XPackInfoLicense{
@@ -146,6 +174,6 @@ func (t *ElasticsearchHandlerTestSuite) TestLicenseDiff() {
 		UID:  "test2",
 		Type: "basic",
 	}
-	assert.True(t.T(), esHandler.LicenseDiff(actual, new))
+	assert.True(t.T(), t.esHandler.LicenseDiff(actual, new))
 
 }

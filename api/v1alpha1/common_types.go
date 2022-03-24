@@ -2,10 +2,8 @@ package v1alpha1
 
 type ElasticsearchRefSpec struct {
 	// Name is the Elasticsearch name object
+	// If empty, it use Adresses and secretName to connect on external elasticsearch (not managed by ECK)
 	Name string `json:"name,omitempty"`
-}
-
-type ElasticsearchExternalRefSpec struct {
 
 	// Addresses is the list of Elasticsearch addresses
 	Addresses []string `json:"addresses,omitempty"`
@@ -15,20 +13,12 @@ type ElasticsearchExternalRefSpec struct {
 	SecretName string `json:"secretName,omitempty"`
 }
 
-type ElasticsearchRefererStd struct {
-	// ElasticsearchRef is the Elasticsearch reference to connect on it (managed by ECK)
-	// +optional
-	ElasticsearchRef *ElasticsearchRefSpec `json:"ref,omitempty"`
-
-	//ElasticsearchExternalRef is the elasticsearch external reference to connect on it (not managed by ECK)
-	// +optional
-	ElasticsearchExternalRef *ElasticsearchExternalRefSpec `json:"externalRef,omitempty"`
+// GetElasticsearchRef permit to Get infos to connect on Elasticsearch
+func (h ElasticsearchRefSpec) GetElasticsearchRef() ElasticsearchRefSpec {
+	return h
 }
 
-func (h *ElasticsearchRefererStd) GetElasticsearchRef() *ElasticsearchRefSpec {
-	return h.ElasticsearchRef
-}
-
-func (h *ElasticsearchRefererStd) GetElasticsearchExternalRef() *ElasticsearchExternalRefSpec {
-	return h.ElasticsearchExternalRef
+// IsManagedByECK permit to know if Elasticsearch is managed by ECK
+func (h ElasticsearchRefSpec) IsManagedByECK() bool {
+	return h.Name != ""
 }

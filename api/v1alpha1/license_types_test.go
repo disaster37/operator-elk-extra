@@ -29,10 +29,8 @@ func (t *V1alpha1TestSuite) TestLicenseCRUD() {
 		},
 		Spec: LicenseSpec{
 			SecretName: "test",
-			ElasticsearchRefererStd: ElasticsearchRefererStd{
-				ElasticsearchRef: &ElasticsearchRefSpec{
-					Name: "test",
-				},
+			ElasticsearchRefSpec: ElasticsearchRefSpec{
+				Name: "test",
 			},
 		},
 	}

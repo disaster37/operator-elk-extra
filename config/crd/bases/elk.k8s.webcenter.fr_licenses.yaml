@@ -40,30 +40,22 @@ spec:
                 type: boolean
               elasticsearchRef:
                 properties:
-                  externalRef:
-                    description: ElasticsearchExternalRef is the elasticsearch external
-                      reference to connect on it (not managed by ECK)
-                    properties:
-                      addresses:
-                        description: Addresses is the list of Elasticsearch addresses
-                        items:
-                          type: string
-                        type: array
-                      secretName:
-                        description: SecretName is the secret that contain the setting
-                          to connect on Elasticsearch that is not managed by ECK.
-                          It need to contain only one entry. The user is the key,
-                          and the password is the data
-                        type: string
-                    type: object
-                  ref:
-                    description: ElasticsearchRef is the Elasticsearch reference to
-                      connect on it (managed by ECK)
-                    properties:
-                      name:
-                        description: Name is the Elasticsearch name object
-                        type: string
-                    type: object
+                  addresses:
+                    description: Addresses is the list of Elasticsearch addresses
+                    items:
+                      type: string
+                    type: array
+                  name:
+                    description: Name is the Elasticsearch name object If empty, it
+                      use Adresses and secretName to connect on external elasticsearch
+                      (not managed by ECK)
+                    type: string
+                  secretName:
+                    description: SecretName is the secret that contain the setting
+                      to connect on Elasticsearch that is not managed by ECK. It need
+                      to contain only one entry. The user is the key, and the password
+                      is the data
+                    type: string
                 type: object
               secretName:
                 description: SecretName is the secret that contain the license

@@ -7,6 +7,7 @@ require (
 	github.com/elastic/cloud-on-k8s v0.0.0-20220316100026-f9f94c5a3f76
 	github.com/elastic/go-elasticsearch/v8 v8.1.0
 	github.com/go-logr/logr v1.2.2
+	github.com/jarcoal/httpmock v1.1.0
 	github.com/olivere/elastic/v7 v7.0.31
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.17.0

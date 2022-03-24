@@ -29,13 +29,13 @@ type LicenseSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	ElasticsearchRefererStd `json:"elasticsearchRef,omitempty"`
+	ElasticsearchRefSpec `json:"elasticsearchRef,omitempty"`
 
 	// SecretName is the secret that contain the license
 	SecretName string `json:"secretName,omitempty"`
 
 	// Basic permit to enable basic license
-	Basic *bool `json:"basic,omitempty"`
+	Basic bool `json:"basic,omitempty"`
 }
 
 // LicenseStatus defines the observed state of License
