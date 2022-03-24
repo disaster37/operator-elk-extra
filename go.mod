@@ -6,6 +6,7 @@ require (
 	github.com/disaster37/operator-sdk-extra v0.0.12-0.20220323163321-68b0675149cb
 	github.com/elastic/cloud-on-k8s v0.0.0-20220316100026-f9f94c5a3f76
 	github.com/elastic/go-elasticsearch/v8 v8.1.0
+	github.com/elastic/go-ucfg v0.8.4
 	github.com/go-logr/logr v1.2.2
 	github.com/jarcoal/httpmock v1.1.0
 	github.com/olivere/elastic/v7 v7.0.31
@@ -38,7 +39,6 @@ require (
 	github.com/elastic/elastic-transport-go/v8 v8.1.0 // indirect
 	github.com/elastic/go-licenser v0.3.1 // indirect
 	github.com/elastic/go-sysinfo v1.1.1 // indirect
-	github.com/elastic/go-ucfg v0.8.4 // indirect
 	github.com/elastic/go-windows v1.0.0 // indirect
 	github.com/evanphx/json-patch v4.12.0+incompatible // indirect
 	github.com/form3tech-oss/jwt-go v3.2.3+incompatible // indirect

@@ -7,11 +7,18 @@ import (
 )
 
 type ElasticsearchHandler interface {
+	// License scope
 	LicenseUpdate(license string) (err error)
 	LicenseDelete() (err error)
 	LicenseGet() (license *olivere.XPackInfoLicense, err error)
 	LicenseDiff(actual, expected *olivere.XPackInfoLicense) (diff bool)
 	LicenseEnableBasic() (err error)
+
+	// ILM scope
+	ILMUpdate(name, rawPolicy string) (err error)
+	ILMDelete(name string) (err error)
+	ILMGet(name string) (policy map[string]any, err error)
+	ILMDiff(actual, expected map[string]any) (diff bool, explain string)
 
 	SetLogger(log *logrus.Entry)
 }
