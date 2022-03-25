@@ -122,5 +122,5 @@ func (h *ElasticsearchHandlerImpl) SLMGet(name string) (policy *SnapshotLifecycl
 
 // SLMDiff permit to check if 2 policy are the same
 func (h *ElasticsearchHandlerImpl) SLMDiff(actual, expected *SnapshotLifecyclePolicySpec) (diffStr string, err error) {
-	return standartDiff(&actual, &expected, h.log)
+	return standartDiff(actual, expected, h.log)
 }

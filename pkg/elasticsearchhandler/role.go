@@ -104,5 +104,5 @@ func (h *ElasticsearchHandlerImpl) RoleGet(name string) (role *olivere.XPackSecu
 
 // RoleDiff permit to check if 2 role are the same
 func (h *ElasticsearchHandlerImpl) RoleDiff(actual, expected *olivere.XPackSecurityRole) (diff string, err error) {
-	return standartDiff(&actual, &expected, h.log)
+	return standartDiff(actual, expected, h.log)
 }

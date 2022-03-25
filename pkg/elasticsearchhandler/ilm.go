@@ -104,5 +104,5 @@ func (h *ElasticsearchHandlerImpl) ILMGet(name string) (policy map[string]any, e
 
 // ILMDiff permit to check if 2 policy are the same
 func (h *ElasticsearchHandlerImpl) ILMDiff(actual, expected map[string]any) (diffStr string, err error) {
-	return standartDiff(&actual, &expected, h.log)
+	return standartDiff(actual, expected, h.log)
 }

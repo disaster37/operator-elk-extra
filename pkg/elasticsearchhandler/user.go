@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// UserCreate permit to create new user
 func (h *ElasticsearchHandlerImpl) UserCreate(name string, user *olivere.XPackSecurityPutUserRequest) (err error) {
 
 	data, err := json.Marshal(user)
@@ -37,6 +38,7 @@ func (h *ElasticsearchHandlerImpl) UserCreate(name string, user *olivere.XPackSe
 	return nil
 }
 
+// UserUpdate permit to update the user
 func (h *ElasticsearchHandlerImpl) UserUpdate(name string, user *olivere.XPackSecurityPutUserRequest) (err error) {
 
 	//check if need to update password
@@ -79,6 +81,7 @@ func (h *ElasticsearchHandlerImpl) UserUpdate(name string, user *olivere.XPackSe
 	return h.UserCreate(name, user)
 }
 
+// UserDelete permit to delete the user
 func (h *ElasticsearchHandlerImpl) UserDelete(name string) (err error) {
 
 	res, err := h.client.API.Security.DeleteUser(
@@ -106,6 +109,7 @@ func (h *ElasticsearchHandlerImpl) UserDelete(name string) (err error) {
 	return nil
 }
 
+// UserGet permot to get the user
 func (h *ElasticsearchHandlerImpl) UserGet(name string) (user *olivere.XPackSecurityUser, err error) {
 
 	res, err := h.client.API.Security.GetUser(
@@ -142,6 +146,7 @@ func (h *ElasticsearchHandlerImpl) UserGet(name string) (user *olivere.XPackSecu
 	return &tmp, nil
 }
 
+// UserDiff permit to check if 2 users are the same
 func (h *ElasticsearchHandlerImpl) UserDiff(actual, expected *olivere.XPackSecurityPutUserRequest) (diff string, err error) {
-	return standartDiff(&actual, &expected, h.log)
+	return standartDiff(actual, expected, h.log)
 }
