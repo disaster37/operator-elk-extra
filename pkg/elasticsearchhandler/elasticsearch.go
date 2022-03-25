@@ -38,6 +38,12 @@ type ElasticsearchHandler interface {
 	RoleGet(name string) (role *olivere.XPackSecurityRole, err error)
 	RoleDiff(actual, expected *olivere.XPackSecurityRole) (diff string, err error)
 
+	// Role mapping scope
+	RoleMappingUpdate(name string, roleMapping *olivere.XPackSecurityRoleMapping) (err error)
+	RoleMappingDelete(name string) (err error)
+	RoleMappingGet(name string) (roleMapping *olivere.XPackSecurityRoleMapping, err error)
+	RoleMappingDiff(actual, expected *olivere.XPackSecurityRoleMapping) (diff string, err error)
+
 	SetLogger(log *logrus.Entry)
 }
 

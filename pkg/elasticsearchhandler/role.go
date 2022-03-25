@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// RoleUpdate permit to update role
 func (h *ElasticsearchHandlerImpl) RoleUpdate(name string, role *olivere.XPackSecurityRole) (err error) {
 
 	data, err := json.Marshal(role)
@@ -37,6 +38,7 @@ func (h *ElasticsearchHandlerImpl) RoleUpdate(name string, role *olivere.XPackSe
 	return nil
 }
 
+// RoleDelete permit to delete role
 func (h *ElasticsearchHandlerImpl) RoleDelete(name string) (err error) {
 
 	res, err := h.client.API.Security.DeleteRole(
@@ -64,6 +66,7 @@ func (h *ElasticsearchHandlerImpl) RoleDelete(name string) (err error) {
 	return nil
 }
 
+// RoleGet permit to get role
 func (h *ElasticsearchHandlerImpl) RoleGet(name string) (role *olivere.XPackSecurityRole, err error) {
 
 	res, err := h.client.API.Security.GetRole(
@@ -99,6 +102,7 @@ func (h *ElasticsearchHandlerImpl) RoleGet(name string) (role *olivere.XPackSecu
 	return &tmp, nil
 }
 
+// RoleDiff permit to check if 2 role are the same
 func (h *ElasticsearchHandlerImpl) RoleDiff(actual, expected *olivere.XPackSecurityRole) (diff string, err error) {
 	return standartDiff(&actual, &expected, h.log)
 }
