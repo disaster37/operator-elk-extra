@@ -94,20 +94,22 @@ func (t *ElasticsearchHandlerTestSuite) TestILMUpdate() {
 
 	rawPolicy := `
 {
-	"phases": {
-		"warm": {
-			"min_age": "10d",
-			"actions": {
-				"forcemerge": {
-					"max_num_segments": 1
+	"policy": {
+		"phases": {
+			"warm": {
+				"min_age": "10d",
+				"actions": {
+					"forcemerge": {
+						"max_num_segments": 1
+					}
 				}
-			}
-		},
-		"delete": {
-			"min_age": "31d",
-			"actions": {
-				"delete": {
-					"delete_searchable_snapshot": true
+			},
+			"delete": {
+				"min_age": "31d",
+				"actions": {
+					"delete": {
+						"delete_searchable_snapshot": true
+					}
 				}
 			}
 		}
@@ -115,20 +117,25 @@ func (t *ElasticsearchHandlerTestSuite) TestILMUpdate() {
 }
 	`
 
+	policy := map[string]interface{}{}
+	if err := json.Unmarshal([]byte(rawPolicy), &policy); err != nil {
+		panic(err)
+	}
+
 	httpmock.RegisterResponder("PUT", urlILM, func(req *http.Request) (*http.Response, error) {
 		resp := httpmock.NewStringResponse(200, "")
 		SetHeaders(resp)
 		return resp, nil
 	})
 
-	err := t.esHandler.ILMUpdate("test", rawPolicy)
+	err := t.esHandler.ILMUpdate("test", policy)
 	if err != nil {
 		t.Fail(err.Error())
 	}
 
 	// When error
 	httpmock.RegisterResponder("PUT", urlILM, httpmock.NewErrorResponder(errors.New("fack error")))
-	err = t.esHandler.ILMUpdate("test", rawPolicy)
+	err = t.esHandler.ILMUpdate("test", policy)
 	assert.Error(t.T(), err)
 }
 

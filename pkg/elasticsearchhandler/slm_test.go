@@ -86,23 +86,21 @@ func (t *ElasticsearchHandlerTestSuite) TestSLMDelete() {
 
 func (t *ElasticsearchHandlerTestSuite) TestSLMUpdate() {
 
-	rawPolicy := `
-{
-	"name": "<daily-snap-{now/d}>",
-	"schedule": "0 30 1 * * ?",
-	"repository": "repo",
-	"config": {
-		"indices": ["test-*"],
-		"ignore_unavailable": false,
-		"include_global_state": false
-	},
-	"retention": {
-		"expire_after": "7d",
-		"min_count": 5,
-		"max_count": 10
-	} 
-}
-	`
+	policy := &SnapshotLifecyclePolicySpec{
+		Schedule:   "0 30 1 * * ?",
+		Name:       "<daily-snap-{now/d}>",
+		Repository: "repo",
+		Configs: `{
+			"indices": ["test-*"],
+			"ignore_unavailable": false,
+			"include_global_state": false
+		}`,
+		Retention: `{
+			"expire_after": "7d",
+			"min_count": 5,
+			"max_count": 10
+		}`,
+	}
 
 	httpmock.RegisterResponder("PUT", urlSLM, func(req *http.Request) (*http.Response, error) {
 		resp := httpmock.NewStringResponse(200, "")
@@ -110,14 +108,14 @@ func (t *ElasticsearchHandlerTestSuite) TestSLMUpdate() {
 		return resp, nil
 	})
 
-	err := t.esHandler.SLMUpdate("test", rawPolicy)
+	err := t.esHandler.SLMUpdate("test", policy)
 	if err != nil {
 		t.Fail(err.Error())
 	}
 
 	// When error
 	httpmock.RegisterResponder("PUT", urlSLM, httpmock.NewErrorResponder(errors.New("fack error")))
-	err = t.esHandler.SLMUpdate("test", rawPolicy)
+	err = t.esHandler.SLMUpdate("test", policy)
 	assert.Error(t.T(), err)
 }
 

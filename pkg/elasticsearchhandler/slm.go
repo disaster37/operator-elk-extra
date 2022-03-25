@@ -1,10 +1,10 @@
 package elasticsearchhandler
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"io/ioutil"
-	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -27,11 +27,16 @@ type SnapshotLifecyclePolicyGet struct {
 }
 
 // SLMUpdate permit to add or update SLM policy
-func (h *ElasticsearchHandlerImpl) SLMUpdate(name, rawPolicy string) (err error) {
+func (h *ElasticsearchHandlerImpl) SLMUpdate(name string, policy *SnapshotLifecyclePolicySpec) (err error) {
+
+	b, err := json.Marshal(policy)
+	if err != nil {
+		return err
+	}
 
 	res, err := h.client.API.SlmPutLifecycle(
 		name,
-		h.client.API.SlmPutLifecycle.WithBody(strings.NewReader(rawPolicy)),
+		h.client.API.SlmPutLifecycle.WithBody(bytes.NewReader(b)),
 		h.client.API.SlmPutLifecycle.WithContext(context.Background()),
 		h.client.API.SlmPutLifecycle.WithPretty(),
 	)

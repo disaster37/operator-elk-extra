@@ -15,13 +15,13 @@ type ElasticsearchHandler interface {
 	LicenseEnableBasic() (err error)
 
 	// ILM scope
-	ILMUpdate(name, rawPolicy string) (err error)
+	ILMUpdate(name string, policy map[string]any) (err error)
 	ILMDelete(name string) (err error)
 	ILMGet(name string) (policy map[string]any, err error)
 	ILMDiff(actual, expected map[string]any) (diff string, err error)
 
 	// SLM scope
-	SLMUpdate(name, rawPolicy string) (err error)
+	SLMUpdate(name string, policy *SnapshotLifecyclePolicySpec) (err error)
 	SLMDelete(name string) (err error)
 	SLMGet(name string) (policy *SnapshotLifecyclePolicySpec, err error)
 	SLMDiff(actual, expected *SnapshotLifecyclePolicySpec) (diff string, err error)

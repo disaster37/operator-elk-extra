@@ -1,26 +1,28 @@
 package elasticsearchhandler
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"io/ioutil"
-	"strings"
 
 	olivere "github.com/olivere/elastic/v7"
 	"github.com/pkg/errors"
 )
 
 // ILMUpdate permit to update or create policy
-func (h *ElasticsearchHandlerImpl) ILMUpdate(name, rawPolicy string) (err error) {
+func (h *ElasticsearchHandlerImpl) ILMUpdate(name string, policy map[string]any) (err error) {
 
-	h.log.Debugf("Name: %s", name)
-	h.log.Debugf("Policy: %s", rawPolicy)
+	b, err := json.Marshal(policy)
+	if err != nil {
+		return err
+	}
 
 	res, err := h.client.API.ILM.PutLifecycle(
 		name,
 		h.client.API.ILM.PutLifecycle.WithContext(context.Background()),
 		h.client.API.ILM.PutLifecycle.WithPretty(),
-		h.client.API.ILM.PutLifecycle.WithBody(strings.NewReader(rawPolicy)),
+		h.client.API.ILM.PutLifecycle.WithBody(bytes.NewReader(b)),
 	)
 
 	if err != nil {
