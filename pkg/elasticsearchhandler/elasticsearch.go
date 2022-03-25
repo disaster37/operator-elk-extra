@@ -32,7 +32,11 @@ type ElasticsearchHandler interface {
 	SnapshotRepositoryGet(name string) (repository *olivere.SnapshotRepositoryMetaData, err error)
 	SnapshotRepositoryDiff(actual, expected *olivere.SnapshotRepositoryMetaData) (diff string, err error)
 
-	
+	// Role scope
+	RoleUpdate(name string, role *olivere.XPackSecurityRole) (err error)
+	RoleDelete(name string) (err error)
+	RoleGet(name string) (role *olivere.XPackSecurityRole, err error)
+	RoleDiff(actual, expected *olivere.XPackSecurityRole) (diff string, err error)
 
 	SetLogger(log *logrus.Entry)
 }
