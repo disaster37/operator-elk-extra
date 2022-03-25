@@ -20,6 +20,12 @@ type ElasticsearchHandler interface {
 	ILMGet(name string) (policy map[string]any, err error)
 	ILMDiff(actual, expected map[string]any) (diff string, err error)
 
+	// SLM scope
+	SLMUpdate(name, rawPolicy string) (err error)
+	SLMDelete(name string) (err error)
+	SLMGet(name string) (policy *SnapshotLifecyclePolicySpec, err error)
+	SLMDiff(actual, expected *SnapshotLifecyclePolicySpec) (diff string, err error)
+
 	SetLogger(log *logrus.Entry)
 }
 
