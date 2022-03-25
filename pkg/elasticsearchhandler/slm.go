@@ -6,9 +6,6 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/elastic/go-ucfg"
-	ucfgjson "github.com/elastic/go-ucfg/json"
-	"github.com/google/go-cmp/cmp"
 	"github.com/pkg/errors"
 )
 
@@ -120,31 +117,5 @@ func (h *ElasticsearchHandlerImpl) SLMGet(name string) (policy *SnapshotLifecycl
 
 // SLMDiff permit to check if 2 policy are the same
 func (h *ElasticsearchHandlerImpl) SLMDiff(actual, expected *SnapshotLifecyclePolicySpec) (diffStr string, err error) {
-	acualByte, err := json.Marshal(actual)
-	if err != nil {
-		return diffStr, err
-	}
-	expectedByte, err := json.Marshal(expected)
-	if err != nil {
-		return diffStr, err
-	}
-
-	actualConf, err := ucfgjson.NewConfig(acualByte, ucfg.PathSep("."))
-	if err != nil {
-		h.log.Errorf("Error when converting current Json: %s\ndata: %s", err.Error(), string(acualByte))
-		return diffStr, err
-	}
-	if err = actualConf.Unpack(&actual); err != nil {
-		return diffStr, err
-	}
-	expectedConf, err := ucfgjson.NewConfig(expectedByte, ucfg.PathSep("."))
-	if err != nil {
-		h.log.Errorf("Error when converting new Json: %s\ndata: %s", err.Error(), string(expectedByte))
-		return diffStr, err
-	}
-	if err = expectedConf.Unpack(&expected); err != nil {
-		return diffStr, err
-	}
-
-	return cmp.Diff(actual, expected), nil
+	return standartDiff(&actual, &expected, h.log)
 }

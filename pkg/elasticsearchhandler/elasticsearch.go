@@ -26,6 +26,14 @@ type ElasticsearchHandler interface {
 	SLMGet(name string) (policy *SnapshotLifecyclePolicySpec, err error)
 	SLMDiff(actual, expected *SnapshotLifecyclePolicySpec) (diff string, err error)
 
+	// Snapshot repository scope
+	SnapshotRepositoryUpdate(name string, repository *olivere.SnapshotRepositoryMetaData) (err error)
+	SnapshotRepositoryDelete(name string) (err error)
+	SnapshotRepositoryGet(name string) (repository *olivere.SnapshotRepositoryMetaData, err error)
+	SnapshotRepositoryDiff(actual, expected *olivere.SnapshotRepositoryMetaData) (diff string, err error)
+
+	
+
 	SetLogger(log *logrus.Entry)
 }
 
