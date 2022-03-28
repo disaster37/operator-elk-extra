@@ -57,6 +57,12 @@ type ElasticsearchHandler interface {
 	ComponentTemplateGet(name string) (component *olivere.IndicesGetComponentTemplateData, err error)
 	ComponentTemplateDiff(actual, expected *olivere.IndicesGetComponentTemplateData) (diff string, err error)
 
+	// Index template scope
+	IndexTemplateUpdate(name string, template *olivere.IndicesGetIndexTemplate) (err error)
+	IndexTemplateDelete(name string) (err error)
+	IndexTemplateGet(name string) (template *olivere.IndicesGetIndexTemplate, err error)
+	IndexTemplateDiff(actual, expected *olivere.IndicesGetIndexTemplate) (diff string, err error)
+
 	SetLogger(log *logrus.Entry)
 }
 
