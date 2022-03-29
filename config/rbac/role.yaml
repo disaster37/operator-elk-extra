@@ -10,7 +10,15 @@ rules:
   verbs:
   - get
   - list
+  - patch
+  - update
   - watch
+- resources:
+  - secrets/status
+  verbs:
+  - get
+  - patch
+  - update
 - apiGroups:
   - elk.k8s.webcenter.fr
   resources:

@@ -47,7 +47,6 @@ type ControllerTestSuite struct {
 	cfg                      *rest.Config
 	mockCtrl                 *gomock.Controller
 	mockElasticsearchHandler *mocks.MockElasticsearchHandler
-	licenseReconciler        *LicenseReconciler
 }
 
 func TestControllerSuite(t *testing.T) {
@@ -101,7 +100,7 @@ func (t *ControllerTestSuite) SetupSuite() {
 	t.k8sClient = k8sClient
 
 	// Init controlles
-	t.licenseReconciler = &LicenseReconciler{
+	licenseReconciler := &LicenseReconciler{
 		Client:   k8sClient,
 		recorder: k8sManager.GetEventRecorderFor("license-controller"),
 		Scheme:   scheme.Scheme,
@@ -109,9 +108,19 @@ func (t *ControllerTestSuite) SetupSuite() {
 			"type": "licenseController",
 		}),
 	}
-	t.licenseReconciler.reconciler = mock.NewMockReconciler(t.licenseReconciler, t.mockElasticsearchHandler)
-	err = t.licenseReconciler.SetupWithManager(k8sManager)
-	if err != nil {
+	licenseReconciler.reconciler = mock.NewMockReconciler(licenseReconciler, t.mockElasticsearchHandler)
+	if err = licenseReconciler.SetupWithManager(k8sManager); err != nil {
+		panic(err)
+	}
+	secretReconciler := &SecretReconciler{
+		Client:   k8sClient,
+		recorder: k8sManager.GetEventRecorderFor("secret-controller"),
+		Scheme:   scheme.Scheme,
+		log: logrus.WithFields(logrus.Fields{
+			"type": "secretController",
+		}),
+	}
+	if err = secretReconciler.SetupWithManager(k8sManager); err != nil {
 		panic(err)
 	}
 

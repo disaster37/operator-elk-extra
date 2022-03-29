@@ -29,7 +29,7 @@ func (t *ControllerTestSuite) TestLicenseReconciler() {
 		test      string
 		isCreated bool
 		isDeleted bool
-		//isUpdated bool
+		isUpdated bool
 	)
 
 	licenseName := "t-license-" + helpers.RandomString(10)
@@ -61,6 +61,18 @@ func (t *ControllerTestSuite) TestLicenseReconciler() {
 					Type: "gold",
 				}, nil
 			}
+		case "update_enterprise_license":
+			if !isUpdated {
+				return &olivere.XPackInfoLicense{
+					UID:  "test",
+					Type: "basic",
+				}, nil
+			} else {
+				return &olivere.XPackInfoLicense{
+					UID:  "test2",
+					Type: "gold",
+				}, nil
+			}
 		}
 
 		return nil, nil
@@ -80,6 +92,12 @@ func (t *ControllerTestSuite) TestLicenseReconciler() {
 			} else {
 				return false
 			}
+		case "update_enterprise_license":
+			if !isUpdated {
+				return true
+			} else {
+				return false
+			}
 		}
 
 		return false
@@ -95,6 +113,10 @@ func (t *ControllerTestSuite) TestLicenseReconciler() {
 				return nil
 			}
 		case "enterprise_license_from_basic_license":
+			return nil
+		case "update_enterprise_license":
+			return nil
+		case "delete_enterprise_license":
 			isDeleted = true
 			return nil
 		}
@@ -107,6 +129,9 @@ func (t *ControllerTestSuite) TestLicenseReconciler() {
 			return nil
 		case "enterprise_license_from_basic_license":
 			isCreated = true
+			return nil
+		case "update_enterprise_license":
+			isUpdated = true
 			return nil
 		}
 
@@ -247,8 +272,56 @@ func (t *ControllerTestSuite) TestLicenseReconciler() {
 	assert.Equal(t.T(), key.Name, secret.Annotations[licenseAnnotation])
 	time.Sleep(10 * time.Second)
 
+	// When update enterprise license
+	logrus.Info("==================================== When update enterprise license")
+	test = "update_enterprise_license"
+	currentHash := fetched.Status.LicenseHash
+	isUpdated = false
+	licenseJson = `
+	{
+		"license": {
+			"uid": "test2",
+			"type": "gold",
+			"issue_date_in_millis": 1629849600000,
+			"expiry_date_in_millis": 1661990399999,
+			"max_nodes": 15,
+			"issued_to": "test",
+			"issuer": "API",
+			"signature": "test",
+			"start_date_in_millis": 1629849600000
+		}
+	}
+	`
+	if err := t.k8sClient.Get(context.Background(), key, secret); err != nil {
+		t.T().Fatal(err)
+	}
+	secret.Data["license"] = []byte(licenseJson)
+	if err := t.k8sClient.Update(context.Background(), secret); err != nil {
+		t.T().Fatal(err)
+	}
+
+	isTimeout, err = RunWithTimeout(func() error {
+		fetched = &elkv1alpha1.License{}
+		if err := t.k8sClient.Get(context.Background(), key, fetched); err != nil {
+			t.T().Fatal(err)
+		}
+		if !isUpdated {
+			return errors.New("Not yet updated")
+		}
+		return nil
+	}, time.Second*30, time.Second*1)
+	if err != nil || isTimeout {
+		t.T().Fatalf("Failed to get License: %s", err.Error())
+	}
+	assert.NotEmpty(t.T(), fetched.Status.ExpireAt)
+	assert.NotEqual(t.T(), currentHash, fetched.Status.LicenseHash)
+	assert.Equal(t.T(), "gold", fetched.Status.LicenseType)
+	assert.True(t.T(), condition.IsStatusConditionPresentAndEqual(fetched.Status.Conditions, licenseCondition, metav1.ConditionTrue))
+	time.Sleep(10 * time.Second)
+
 	// When remove enterprise license
 	logrus.Info("==================================== When remove enterprise license")
+	test = "delete_enterprise_license"
 	isDeleted = false
 	if err = t.k8sClient.Delete(context.Background(), fetched, &client.DeleteOptions{GracePeriodSeconds: &wait}); err != nil {
 		t.T().Fatal(err)

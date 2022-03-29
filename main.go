@@ -132,6 +132,18 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "License")
 		os.Exit(1)
 	}
+	secretController := &controllers.SecretReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}
+	secretController.SetLogger(log.WithFields(logrus.Fields{
+		"type": "SecretController",
+	}))
+	secretController.SetRecorder(mgr.GetEventRecorderFor("secret-controller"))
+	if err = secretController.SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Secret")
+		os.Exit(1)
+	}
 
 	if err = (&controllers.ElasticsearchILMReconciler{
 		Client: mgr.GetClient(),
