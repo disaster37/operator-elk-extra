@@ -24,6 +24,7 @@ const (
 	waitDurationWhenError = 1 * time.Minute
 	elasticBaseSecret     = "es-elastic-user"
 	elasticBaseService    = "es-http"
+	name                  = "elk.k8s.webcenter.fr"
 )
 
 type ElasticsearchReferer interface {

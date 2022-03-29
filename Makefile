@@ -93,8 +93,13 @@ fmt: ## Run go fmt against code.
 vet: ## Run go vet against code.
 	go vet ./...
 
+.PHONY: mock-gen
+mock-gen:
+	go install github.com/golang/mock/mockgen@v1.6.0
+	mockgen --build_flags=--mod=mod -destination=pkg/mocks/elasticsearch_handler.go -package=mocks github.com/disaster37/operator-elk-extra/pkg/elasticsearchhandler ElasticsearchHandler
+
 .PHONY: test
-test: manifests generate fmt vet envtest ## Run tests.
+test: manifests generate fmt vet envtest mock-gen ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./api/... ./pkg/... ./controllers/...  -v -coverprofile cover.out $(TESTARGS) -timeout 600s -v -count 1 -parallel 1
 
 ##@ Build

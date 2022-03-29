@@ -43,16 +43,18 @@ import (
 )
 
 const (
-	licenseFinalizer = "license.elk.k8s.webcenter.fr/finalizer"
-	licenseCondition = "UpdateLicense"
+	licenseFinalizer  = "license.elk.k8s.webcenter.fr/finalizer"
+	licenseAnnotation = "elk.k8s.webcenter.fr/license"
+	licenseCondition  = "UpdateLicense"
 )
 
 // LicenseReconciler reconciles a License object
 type LicenseReconciler struct {
 	client.Client
-	Scheme   *runtime.Scheme
-	recorder record.EventRecorder
-	log      *logrus.Entry
+	Scheme     *runtime.Scheme
+	recorder   record.EventRecorder
+	log        *logrus.Entry
+	reconciler controller.Reconciler
 }
 
 //+kubebuilder:rbac:groups=elk.k8s.webcenter.fr,resources=licenses,verbs=get;list;watch;create;update;patch;delete
@@ -71,7 +73,7 @@ type LicenseReconciler struct {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.11.0/pkg/reconcile
 func (r *LicenseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 
-	reconciler, err := controller.NewStdReconciler(r.Client, licenseFinalizer, r, r.log, r.recorder, waitDurationWhenError)
+	reconciler, err := controller.NewStdReconciler(r.Client, licenseFinalizer, r.reconciler, r.log, r.recorder, waitDurationWhenError)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -158,6 +160,20 @@ func (r *LicenseReconciler) Read(ctx context.Context, resource resource.Resource
 		}
 		data["expectedLicense"] = &expectedLicense.License
 		data["rawLicense"] = string(licenseB)
+
+		// Add annotation on secret to track change
+		if secret.Annotations == nil || secret.Annotations[licenseAnnotation] != license.Name {
+			if secret.Annotations == nil {
+				secret.Annotations = map[string]string{}
+			}
+			secret.Annotations[licenseAnnotation] = license.Name
+			if err = r.Client.Update(ctx, secret); err != nil {
+				r.recorder.Eventf(resource, core.EventTypeWarning, "Failed", "Error when add annotation on secret %s: %s", license.Spec.SecretName, err.Error())
+				return res, err
+			}
+
+			r.recorder.Eventf(resource, core.EventTypeNormal, "Success", "Add annotation on secret %s", license.Spec.SecretName)
+		}
 	}
 
 	// Read the current license from Elasticsearch

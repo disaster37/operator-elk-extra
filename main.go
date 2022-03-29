@@ -132,6 +132,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "License")
 		os.Exit(1)
 	}
+
 	if err = (&controllers.ElasticsearchILMReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
