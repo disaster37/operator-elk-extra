@@ -29,6 +29,8 @@ type ElasticsearchILMSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
+	ElasticsearchRefSpec `json:"elasticsearchRef,omitempty"`
+
 	// Policy is the raw policy on JSON
 	Policy string `json:"policy,omitempty"`
 }

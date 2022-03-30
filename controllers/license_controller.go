@@ -99,7 +99,7 @@ func (r *LicenseReconciler) SetRecorder(recorder record.EventRecorder) {
 	r.recorder = recorder
 }
 
-// Configure permit to Elasticsearch handler
+// Configure permit to init Elasticsearch handler
 func (r *LicenseReconciler) Configure(ctx context.Context, req ctrl.Request, resource resource.Resource) (meta any, err error) {
 	// Get elasticsearch handler / client
 	license := resource.(*elkv1alpha1.License)
@@ -112,8 +112,7 @@ func (r *LicenseReconciler) Configure(ctx context.Context, req ctrl.Request, res
 	return meta, err
 }
 
-// Read permit to get current License that fire the reconcile
-// It also init elasticsearch handler and read the current license on Elasticsearch
+// Read permit to get current License
 func (r *LicenseReconciler) Read(ctx context.Context, resource resource.Resource, data map[string]any, meta any) (res ctrl.Result, err error) {
 	license := resource.(*elkv1alpha1.License)
 	esHandler := meta.(elasticsearchhandler.ElasticsearchHandler)
