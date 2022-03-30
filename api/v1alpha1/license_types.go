@@ -24,18 +24,26 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // LicenseSpec defines the desired state of License
+// +k8s:openapi-gen=true
 type LicenseSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of License. Edit license_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	ElasticsearchRefSpec `json:"elasticsearchRef,omitempty"`
+
+	// SecretName is the secret that contain the license
+	SecretName string `json:"secretName,omitempty"`
+
+	// Basic permit to enable basic license
+	Basic bool `json:"basic,omitempty"`
 }
 
 // LicenseStatus defines the observed state of License
 type LicenseStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	LicenseType string             `json:"licenseType"`
+	ExpireAt    string             `json:"expireAt"`
+	LicenseHash string             `json:"licenseHash"`
+	Conditions  []metav1.Condition `json:"conditions"`
 }
 
 //+kubebuilder:object:root=true
@@ -61,4 +69,14 @@ type LicenseList struct {
 
 func init() {
 	SchemeBuilder.Register(&License{}, &LicenseList{})
+}
+
+// GetObjectMeta permit to get the current ObjectMeta
+func (h *License) GetObjectMeta() metav1.ObjectMeta {
+	return h.ObjectMeta
+}
+
+// GetStatus permit to get the current status
+func (h *License) GetStatus() any {
+	return h.Status
 }
