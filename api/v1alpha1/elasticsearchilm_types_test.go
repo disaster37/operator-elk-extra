@@ -9,10 +9,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-func (t *V1alpha1TestSuite) TestLicenseCRUD() {
+func (t *V1alpha1TestSuite) TestElasticsearchILMCRUD() {
 	var (
 		key              types.NamespacedName
-		created, fetched *License
+		created, fetched *ElasticsearchILM
 		err              error
 	)
 
@@ -22,23 +22,20 @@ func (t *V1alpha1TestSuite) TestLicenseCRUD() {
 	}
 
 	// Create object
-	created = &License{
+	created = &ElasticsearchILM{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      key.Name,
 			Namespace: key.Namespace,
 		},
-		Spec: LicenseSpec{
-			SecretName: "test",
-			ElasticsearchRefSpec: ElasticsearchRefSpec{
-				Name: "test",
-			},
+		Spec: ElasticsearchILMSpec{
+			Policy: "fake",
 		},
 	}
 	err = t.k8sClient.Create(context.Background(), created)
 	assert.NoError(t.T(), err)
 
 	// Get object
-	fetched = &License{}
+	fetched = &ElasticsearchILM{}
 	err = t.k8sClient.Get(context.Background(), key, fetched)
 	assert.NoError(t.T(), err)
 	assert.Equal(t.T(), created, fetched)
@@ -50,38 +47,32 @@ func (t *V1alpha1TestSuite) TestLicenseCRUD() {
 	assert.Error(t.T(), err)
 }
 
-func (t *V1alpha1TestSuite) TestLicenseGetObjectMeta() {
+func (t *V1alpha1TestSuite) TestElasticsearchILMGetObjectMeta() {
 	meta := metav1.ObjectMeta{
 		Name:      "test",
 		Namespace: "test",
 	}
-	test := &License{
+	test := &ElasticsearchILM{
 		ObjectMeta: meta,
-		Spec: LicenseSpec{
-			SecretName: "test",
-			ElasticsearchRefSpec: ElasticsearchRefSpec{
-				Name: "test",
-			},
+		Spec: ElasticsearchILMSpec{
+			Policy: "fake",
 		},
 	}
 
 	assert.Equal(t.T(), meta, test.GetObjectMeta())
 }
 
-func (t *V1alpha1TestSuite) TestLicenseGetStatus() {
-	status := LicenseStatus{
+func (t *V1alpha1TestSuite) TestElasticsearchILMGetStatus() {
+	status := ElasticsearchILMStatus{
 		Conditions: []metav1.Condition{
 			{
 				Type: "test",
 			},
 		},
 	}
-	test := &License{
-		Spec: LicenseSpec{
-			SecretName: "test",
-			ElasticsearchRefSpec: ElasticsearchRefSpec{
-				Name: "test",
-			},
+	test := &ElasticsearchILM{
+		Spec: ElasticsearchILMSpec{
+			Policy: "fake",
 		},
 		Status: status,
 	}
