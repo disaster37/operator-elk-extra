@@ -101,26 +101,50 @@ func (t *ControllerTestSuite) SetupSuite() {
 
 	// Init controlles
 	licenseReconciler := &LicenseReconciler{
-		Client:   k8sClient,
-		recorder: k8sManager.GetEventRecorderFor("license-controller"),
-		Scheme:   scheme.Scheme,
-		log: logrus.WithFields(logrus.Fields{
-			"type": "licenseController",
-		}),
+		Client: k8sClient,
+		Scheme: scheme.Scheme,
 	}
-	licenseReconciler.reconciler = mock.NewMockReconciler(licenseReconciler, t.mockElasticsearchHandler)
+	licenseReconciler.SetLogger(logrus.WithFields(logrus.Fields{
+		"type": "licenseController",
+	}))
+	licenseReconciler.SetRecorder(k8sManager.GetEventRecorderFor("license-controller"))
+	licenseReconciler.SetReconsiler(mock.NewMockReconciler(licenseReconciler, t.mockElasticsearchHandler))
 	if err = licenseReconciler.SetupWithManager(k8sManager); err != nil {
 		panic(err)
 	}
 	secretReconciler := &SecretReconciler{
-		Client:   k8sClient,
-		recorder: k8sManager.GetEventRecorderFor("secret-controller"),
-		Scheme:   scheme.Scheme,
-		log: logrus.WithFields(logrus.Fields{
-			"type": "secretController",
-		}),
+		Client: k8sClient,
+		Scheme: scheme.Scheme,
 	}
+	secretReconciler.SetLogger(logrus.WithFields(logrus.Fields{
+		"type": "secretController",
+	}))
+	secretReconciler.SetRecorder(k8sManager.GetEventRecorderFor("secret-controller"))
 	if err = secretReconciler.SetupWithManager(k8sManager); err != nil {
+		panic(err)
+	}
+	ilmReconciler := &ElasticsearchILMReconciler{
+		Client: k8sClient,
+		Scheme: scheme.Scheme,
+	}
+	ilmReconciler.SetLogger(logrus.WithFields(logrus.Fields{
+		"type": "ilmController",
+	}))
+	ilmReconciler.SetRecorder(k8sManager.GetEventRecorderFor("ilm-controller"))
+	ilmReconciler.SetReconsiler(mock.NewMockReconciler(ilmReconciler, t.mockElasticsearchHandler))
+	if err = ilmReconciler.SetupWithManager(k8sManager); err != nil {
+		panic(err)
+	}
+	repositoryReconciler := &ElasticsearchSnapshotRepositoryReconciler{
+		Client: k8sClient,
+		Scheme: scheme.Scheme,
+	}
+	repositoryReconciler.SetLogger(logrus.WithFields(logrus.Fields{
+		"type": "repositoryController",
+	}))
+	repositoryReconciler.SetRecorder(k8sManager.GetEventRecorderFor("repository-controller"))
+	repositoryReconciler.SetReconsiler(mock.NewMockReconciler(repositoryReconciler, t.mockElasticsearchHandler))
+	if err = repositoryReconciler.SetupWithManager(k8sManager); err != nil {
 		panic(err)
 	}
 

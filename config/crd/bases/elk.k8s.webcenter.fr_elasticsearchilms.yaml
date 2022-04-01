@@ -35,9 +35,30 @@ spec:
           spec:
             description: ElasticsearchILMSpec defines the desired state of ElasticsearchILM
             properties:
+              elasticsearchRef:
+                properties:
+                  addresses:
+                    description: Addresses is the list of Elasticsearch addresses
+                    items:
+                      type: string
+                    type: array
+                  name:
+                    description: Name is the Elasticsearch name object If empty, it
+                      use Adresses and secretName to connect on external elasticsearch
+                      (not managed by ECK)
+                    type: string
+                  secretName:
+                    description: SecretName is the secret that contain the setting
+                      to connect on Elasticsearch that is not managed by ECK. It need
+                      to contain only one entry. The user is the key, and the password
+                      is the data
+                    type: string
+                type: object
               policy:
                 description: Policy is the raw policy on JSON
                 type: string
+            required:
+            - policy
             type: object
           status:
             description: ElasticsearchILMStatus defines the observed state of ElasticsearchILM

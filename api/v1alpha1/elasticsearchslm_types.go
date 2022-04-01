@@ -24,18 +24,45 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // ElasticsearchSLMSpec defines the desired state of ElasticsearchSLM
+// +k8s:openapi-gen=true
 type ElasticsearchSLMSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of ElasticsearchSLM. Edit elasticsearchslm_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	ElasticsearchRefSpec `json:"elasticsearchRef"`
+
+	Schedule   string                     `json:"schedule"`
+	Name       string                     `json:"name"`
+	Repository string                     `json:"repository"`
+	Config     ElasticsearchSLMConfig     `json:"config"`
+	Retention  *ElasticsearchSLMRetention `json:"retention,omitempty"`
+
+	// Policy is the raw policy on JSON
+	Policy string `json:"policy"`
+}
+
+type ElasticsearchSLMConfig struct {
+	ExpendWildcards    string            `json:"expand_wildcards,omitempty"`
+	IgnoreUnavailable  bool              `json:"ignore_unavailable,omitempty"`
+	IncludeGlobalState bool              `json:"include_global_state,omitempty"`
+	Indices            []string          `json:"indices,omitempty"`
+	FeatureStates      []string          `json:"feature_states,omitempty"`
+	Metadata           map[string]string `json:"metadata,omitempty"`
+	Partial            bool              `json:"partial,omitempty"`
+}
+
+type ElasticsearchSLMRetention struct {
+	ExpireAfter string `json:"expire_after,omitempty"`
+	MaxCount    int64  `json:"max_count,omitempty"`
+	MinCount    int64  `json:"min_count,omitempty"`
 }
 
 // ElasticsearchSLMStatus defines the observed state of ElasticsearchSLM
 type ElasticsearchSLMStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+
+	Conditions []metav1.Condition `json:"conditions"`
 }
 
 //+kubebuilder:object:root=true
@@ -61,4 +88,14 @@ type ElasticsearchSLMList struct {
 
 func init() {
 	SchemeBuilder.Register(&ElasticsearchSLM{}, &ElasticsearchSLMList{})
+}
+
+// GetObjectMeta permit to get the current ObjectMeta
+func (h *ElasticsearchSLM) GetObjectMeta() metav1.ObjectMeta {
+	return h.ObjectMeta
+}
+
+// GetStatus permit to get the current status
+func (h *ElasticsearchSLM) GetStatus() any {
+	return h.Status
 }

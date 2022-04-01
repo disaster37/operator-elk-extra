@@ -30,14 +30,12 @@ import (
 	"github.com/disaster37/operator-sdk-extra/pkg/resource"
 	olivere "github.com/olivere/elastic/v7"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	core "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	condition "k8s.io/apimachinery/pkg/api/meta"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -50,11 +48,9 @@ const (
 
 // LicenseReconciler reconciles a License object
 type LicenseReconciler struct {
+	Reconciler
 	client.Client
-	Scheme     *runtime.Scheme
-	recorder   record.EventRecorder
-	log        *logrus.Entry
-	reconciler controller.Reconciler
+	Scheme *runtime.Scheme
 }
 
 //+kubebuilder:rbac:groups=elk.k8s.webcenter.fr,resources=licenses,verbs=get;list;watch;create;update;patch;delete
@@ -91,31 +87,9 @@ func (r *LicenseReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *LicenseReconciler) SetLogger(log *logrus.Entry) {
-	r.log = log
-}
-
-func (r *LicenseReconciler) SetRecorder(recorder record.EventRecorder) {
-	r.recorder = recorder
-}
-
 // Configure permit to init Elasticsearch handler
 func (r *LicenseReconciler) Configure(ctx context.Context, req ctrl.Request, resource resource.Resource) (meta any, err error) {
-	// Get elasticsearch handler / client
 	license := resource.(*elkv1alpha1.License)
-	meta, err = GetElasticsearchHandler(ctx, &license.Spec, r.Client, req, r.log)
-	if err != nil {
-		r.recorder.Eventf(resource, core.EventTypeWarning, "Failed", "Unable to init elasticsearch handler: %s", err.Error())
-		return nil, err
-	}
-
-	return meta, err
-}
-
-// Read permit to get current License
-func (r *LicenseReconciler) Read(ctx context.Context, resource resource.Resource, data map[string]any, meta any) (res ctrl.Result, err error) {
-	license := resource.(*elkv1alpha1.License)
-	esHandler := meta.(elasticsearchhandler.ElasticsearchHandler)
 
 	// Init condition status if not exist
 	if condition.FindStatusCondition(license.Status.Conditions, licenseCondition) == nil {
@@ -125,6 +99,20 @@ func (r *LicenseReconciler) Read(ctx context.Context, resource resource.Resource
 			Reason: "Initialize",
 		})
 	}
+
+	// Get elasticsearch handler / client
+	meta, err = GetElasticsearchHandler(ctx, &license.Spec, r.Client, r.dinamicClient, req, r.log)
+	if err != nil {
+		return nil, errors.Wrap(err, "Unable to init elasticsearch handler")
+	}
+
+	return meta, err
+}
+
+// Read permit to get current License
+func (r *LicenseReconciler) Read(ctx context.Context, resource resource.Resource, data map[string]any, meta any) (res ctrl.Result, err error) {
+	license := resource.(*elkv1alpha1.License)
+	esHandler := meta.(elasticsearchhandler.ElasticsearchHandler)
 
 	// Read license contend from secret if not basic
 	if !license.Spec.Basic {
@@ -139,23 +127,15 @@ func (r *LicenseReconciler) Read(ctx context.Context, resource resource.Resource
 				r.recorder.Eventf(resource, core.EventTypeWarning, "Failed", "Secret %s not yet exist", license.Spec.SecretName)
 				return ctrl.Result{RequeueAfter: waitDurationWhenError}, nil
 			}
-			r.log.Errorf("Error when get resource: %s", err.Error())
-			r.recorder.Eventf(resource, core.EventTypeWarning, "Failed", "Error when get secret %s: %s", license.Spec.SecretName, err.Error())
-			return res, err
+			return res, errors.Wrapf(err, "Error when get secret %s", license.Spec.SecretName)
 		}
 		licenseB, ok := secret.Data["license"]
 		if !ok {
-			r.recorder.Eventf(resource, core.EventTypeWarning, "Failed", "Secret %s must have a license key", license.Spec.SecretName)
-			return res, errors.Errorf("Secret %s must have a license key", license.Spec.SecretName)
-		}
-		if err != nil {
-			r.recorder.Eventf(resource, core.EventTypeWarning, "Failed", "License contend is invalid: %s", err.Error())
-			return res, err
+			return res, errors.Wrapf(err, "Secret %s must have a license key", license.Spec.SecretName)
 		}
 		expectedLicense := &olivere.XPackInfoServiceResponse{}
 		if err = json.Unmarshal(licenseB, expectedLicense); err != nil {
-			r.recorder.Eventf(resource, core.EventTypeWarning, "Failed", "License contend is invalid: %s", err.Error())
-			return res, err
+			return res, errors.Wrap(err, "License contend is invalid")
 		}
 		data["expectedLicense"] = &expectedLicense.License
 		data["rawLicense"] = string(licenseB)
@@ -167,10 +147,8 @@ func (r *LicenseReconciler) Read(ctx context.Context, resource resource.Resource
 			}
 			secret.Annotations[licenseAnnotation] = license.Name
 			if err = r.Client.Update(ctx, secret); err != nil {
-				r.recorder.Eventf(resource, core.EventTypeWarning, "Failed", "Error when add annotation on secret %s: %s", license.Spec.SecretName, err.Error())
-				return res, err
+				return res, errors.Wrapf(err, "Error when add annotation on secret %s", license.Spec.SecretName)
 			}
-
 			r.recorder.Eventf(resource, core.EventTypeNormal, "Success", "Add annotation on secret %s", license.Spec.SecretName)
 		}
 	}
@@ -178,8 +156,7 @@ func (r *LicenseReconciler) Read(ctx context.Context, resource resource.Resource
 	// Read the current license from Elasticsearch
 	licenseInfo, err := esHandler.LicenseGet()
 	if err != nil {
-		r.recorder.Eventf(resource, core.EventTypeWarning, "Failed", "Unable to get current license from Elasticsearch: %s", err.Error())
-		return res, err
+		return res, errors.Wrap(err, "Unable to get current license from Elasticsearch")
 	}
 	data["currentLicense"] = licenseInfo
 	return res, nil
@@ -192,23 +169,10 @@ func (r *LicenseReconciler) Create(ctx context.Context, resource resource.Resour
 	license := resource.(*elkv1alpha1.License)
 	var d any
 
-	// handler condition status if error
-	defer func() {
-		if err != nil {
-			condition.SetStatusCondition(&license.Status.Conditions, v1.Condition{
-				Type:    licenseCondition,
-				Status:  v1.ConditionFalse,
-				Reason:  "Failed",
-				Message: err.Error(),
-			})
-		}
-	}()
-
 	// Basic license
 	if license.Spec.Basic {
 		if err = esHandler.LicenseEnableBasic(); err != nil {
-			r.recorder.Eventf(resource, core.EventTypeWarning, "Failed", "Error when activate basic license: %s", err.Error())
-			return res, err
+			return res, errors.Wrap(err, "Error when activate basic license")
 		}
 		r.log.Info("Successfully enable basic license")
 		r.recorder.Event(resource, core.EventTypeNormal, "Completed", "Enable basic license")
@@ -229,8 +193,7 @@ func (r *LicenseReconciler) Create(ctx context.Context, resource resource.Resour
 		}
 		rawLicense := d.(string)
 		if err = esHandler.LicenseUpdate(rawLicense); err != nil {
-			r.recorder.Eventf(resource, core.EventTypeWarning, "Failed", "Error when add enterprise license: %s", err.Error())
-			return res, err
+			return res, errors.Wrap(err, "Error when add enterprise license on Elasticsearch")
 		}
 		r.log.Infof("Successfully enable %s license", expectedLicense.Type)
 		r.recorder.Eventf(resource, core.EventTypeNormal, "Completed", "Enable %s license", expectedLicense.Type)
@@ -239,14 +202,6 @@ func (r *LicenseReconciler) Create(ctx context.Context, resource resource.Resour
 		license.Status.LicenseHash = fmt.Sprintf("%x", sha256.Sum256([]byte(rawLicense)))
 		license.Status.LicenseType = expectedLicense.Type
 	}
-
-	// Update status
-	condition.SetStatusCondition(&license.Status.Conditions, v1.Condition{
-		Type:    licenseCondition,
-		Status:  v1.ConditionTrue,
-		Reason:  "Success",
-		Message: fmt.Sprintf("License of type %s successfully updated", license.Status.LicenseType),
-	})
 
 	return res, nil
 }
@@ -265,11 +220,9 @@ func (r *LicenseReconciler) Delete(ctx context.Context, resource resource.Resour
 	// If enterprise license, it must enable basic license instead
 	if !license.Spec.Basic {
 		if err = esHandler.LicenseEnableBasic(); err != nil {
-			r.recorder.Eventf(resource, core.EventTypeWarning, "Failed", "Error when downgrade to basic license: %s", err.Error())
-			return err
+			return errors.Wrap(err, "Error when downgrade to basic license")
 		}
 		r.log.Info("Successfully downgrade to basic license")
-		r.recorder.Event(resource, core.EventTypeNormal, "Completed", "Downgrade to basic license")
 	}
 
 	return nil
@@ -318,16 +271,61 @@ func (r *LicenseReconciler) Diff(resource resource.Resource, data map[string]int
 		return diff, nil
 	}
 
+	return
+}
+
+// OnError permit to set status condition on the right state and record error
+func (r *LicenseReconciler) OnError(ctx context.Context, resource resource.Resource, data map[string]any, meta any, err error) {
+	license := resource.(*elkv1alpha1.License)
+
+	r.log.Error(err)
+	r.recorder.Event(resource, core.EventTypeWarning, "Failed", err.Error())
+
+	condition.SetStatusCondition(&license.Status.Conditions, v1.Condition{
+		Type:    licenseCondition,
+		Status:  v1.ConditionFalse,
+		Reason:  "Failed",
+		Message: err.Error(),
+	})
+}
+
+// OnSuccess permit to set status condition on the right state is everithink is good
+func (r *LicenseReconciler) OnSuccess(ctx context.Context, resource resource.Resource, data map[string]any, meta any, diff controller.Diff) (err error) {
+	license := resource.(*elkv1alpha1.License)
+
+	if diff.NeedCreate {
+		condition.SetStatusCondition(&license.Status.Conditions, v1.Condition{
+			Type:    licenseCondition,
+			Status:  v1.ConditionTrue,
+			Reason:  "Success",
+			Message: fmt.Sprintf("License of type %s successfully created", license.Status.LicenseType),
+		})
+
+		return nil
+	}
+
+	if diff.NeedUpdate {
+		condition.SetStatusCondition(&license.Status.Conditions, v1.Condition{
+			Type:    licenseCondition,
+			Status:  v1.ConditionTrue,
+			Reason:  "Success",
+			Message: fmt.Sprintf("License of type %s successfully updated", license.Status.LicenseType),
+		})
+
+		return nil
+	}
+
 	// Update condition status if needed
 	if condition.IsStatusConditionPresentAndEqual(license.Status.Conditions, licenseCondition, v1.ConditionFalse) {
 		condition.SetStatusCondition(&license.Status.Conditions, v1.Condition{
-			Type:   licenseCondition,
-			Reason: "Success",
-			Status: v1.ConditionTrue,
+			Type:    licenseCondition,
+			Reason:  "Success",
+			Status:  v1.ConditionTrue,
+			Message: "License already set",
 		})
 
 		r.recorder.Event(resource, core.EventTypeNormal, "Completed", "License already set")
 	}
 
-	return
+	return nil
 }

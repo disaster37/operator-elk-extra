@@ -14,11 +14,11 @@ type SnapshotLifecyclePolicy map[string]*SnapshotLifecyclePolicyGet
 
 // SnapshotLifecyclePolicySpec is the snapshot lifecycle policy object
 type SnapshotLifecyclePolicySpec struct {
-	Schedule   string      `json:"schedule"`
-	Name       string      `json:"name"`
-	Repository string      `json:"repository"`
-	Configs    interface{} `json:"config,omitempty"`
-	Retention  interface{} `json:"retention,omitempty"`
+	Schedule   string `json:"schedule"`
+	Name       string `json:"name"`
+	Repository string `json:"repository"`
+	Configs    any    `json:"config,omitempty"`
+	Retention  any    `json:"retention,omitempty"`
 }
 
 // SnapshotLifecyclePolicyGet is the policy
@@ -122,5 +122,5 @@ func (h *ElasticsearchHandlerImpl) SLMGet(name string) (policy *SnapshotLifecycl
 
 // SLMDiff permit to check if 2 policy are the same
 func (h *ElasticsearchHandlerImpl) SLMDiff(actual, expected *SnapshotLifecyclePolicySpec) (diffStr string, err error) {
-	return standartDiff(actual, expected, h.log)
+	return standartDiff(actual, expected, h.log, nil)
 }

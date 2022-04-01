@@ -32,7 +32,7 @@ type ElasticsearchILMSpec struct {
 	ElasticsearchRefSpec `json:"elasticsearchRef,omitempty"`
 
 	// Policy is the raw policy on JSON
-	Policy string `json:"policy,omitempty"`
+	Policy string `json:"policy"`
 }
 
 // ElasticsearchILMStatus defines the observed state of ElasticsearchILM

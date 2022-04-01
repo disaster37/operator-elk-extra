@@ -7,10 +7,11 @@ import (
 	"github.com/elastic/go-ucfg"
 	ucfgjson "github.com/elastic/go-ucfg/json"
 	"github.com/google/go-cmp/cmp"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
-func standartDiff(actual, expected any, log *logrus.Entry) (diff string, err error) {
+func standartDiff(actual, expected any, log *logrus.Entry, ignore map[string]any) (diff string, err error) {
 	acualByte, err := json.Marshal(actual)
 	if err != nil {
 		return diff, err
@@ -25,6 +26,9 @@ func standartDiff(actual, expected any, log *logrus.Entry) (diff string, err err
 		log.Errorf("Error when converting current Json: %s\ndata: %s", err.Error(), string(acualByte))
 		return diff, err
 	}
+	if err = ignoreDiff(actualConf, ignore); err != nil {
+		return diff, err
+	}
 	actualUnpack := reflect.New(reflect.TypeOf(actual)).Interface()
 	if err = actualConf.Unpack(actualUnpack); err != nil {
 		return diff, err
@@ -34,10 +38,69 @@ func standartDiff(actual, expected any, log *logrus.Entry) (diff string, err err
 		log.Errorf("Error when converting new Json: %s\ndata: %s", err.Error(), string(expectedByte))
 		return diff, err
 	}
+	if err = ignoreDiff(expectedConf, ignore); err != nil {
+		return diff, err
+	}
 	expectedUnpack := reflect.New(reflect.TypeOf(expected)).Interface()
 	if err = expectedConf.Unpack(expectedUnpack); err != nil {
 		return diff, err
 	}
 
 	return cmp.Diff(actualUnpack, expectedUnpack), nil
+}
+
+func ignoreDiff(c *ucfg.Config, ignore map[string]any) (err error) {
+	if ignore != nil {
+		for key, value := range ignore {
+			hasField, err := c.Has(key, -1, ucfg.PathSep("."))
+			if err != nil {
+				return err
+			}
+			if hasField {
+				needRemoveKey := false
+				if value == nil {
+					needRemoveKey = true
+				} else {
+					var v any
+					switch t := value.(type) {
+					case bool:
+						v, err = c.Bool(key, -1, ucfg.PathSep("."))
+						if err != nil {
+							return err
+						}
+						break
+					case string:
+						v, err = c.String(key, -1, ucfg.PathSep("."))
+						if err != nil {
+							return err
+						}
+						break
+					case int64:
+						v, err = c.Int(key, -1, ucfg.PathSep("."))
+						if err != nil {
+							return err
+						}
+						break
+					case float64:
+						v, err = c.Float(key, -1, ucfg.PathSep("."))
+						if err != nil {
+							return err
+						}
+						break
+					default:
+						return errors.Errorf("Type %T not supported", t)
+					}
+
+					if v == value {
+						needRemoveKey = true
+					}
+				}
+				if needRemoveKey {
+					c.Remove(key, -1, ucfg.PathSep("."))
+				}
+			}
+		}
+	}
+
+	return nil
 }

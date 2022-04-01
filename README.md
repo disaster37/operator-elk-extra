@@ -3,17 +3,46 @@ This operator provide features that not yet exist on ECK
 
 ## Features
 
+All operator features can work with cluster managed by ECK but also with all other cluster
+
+If your cluster is managed by ECK, you just need to specify this on `spec` resources:
+```yaml
+spec:
+  elasticsearchRef:
+    name: cluster-sample
+```
+
+else, you need to specify this:
+```yaml
+spec:
+  elasticsearchRef:
+    addresses:
+      - https://elasticsearch.domain.com
+    secretName: elasticsearch-credentials
+```
+
+The secret must be contain `user` and `password` key like this:
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: elasticsearchcredentials
+  namespace: elk
+type: Opaque
+data:
+  user: YOUR_USER_BASE64
+  password: YOUR_PASSWORD_BASE64
+```
+
+
 ### License
 
-The ECK doesn't allow to manage multiple license from same operator. So, you need to deploy one operator per license. Moreoever, it force you to use `enterprise` license.
+This feature not working when cluster is deployed by ECK, because off is already managed by it.
+There are no way to disable license reconciler on ECK
 
-This operator fix this behaviour. You can now use `gold, platinium or enterprise` license. And you can manage all your license from one operator.
-
-> You can manage license from cluster managed by ECK or others.
 
 1. You need to create `Secret` with license key on Elasticsearch namespace.
 2. You need to create `License` that reference secret previously created on same namespace.
-3. If Elasticsearch cluster is not managed by ECK, you need to create `Secret` with key `adresses, username, password` and reference it on License object.
 
 __Secret sample__:
 ```yaml
@@ -25,6 +54,76 @@ metadata:
 type: Opaque
 data:
   license: YOUR_LICENSE_CONTEND_BASE64
+```
+
+__License sample when Elasticsearch is not deployed by ECK__:
+```yaml
+apiVersion: elk.k8s.webcenter.fr/v1alpha1
+kind: License
+metadata:
+  name: license
+  namespace: elk
+spec:
+  elasticsearchRef:
+    addresses:
+      - https://elasticsearch.domain.com
+    secretName: elasticsearch-credentials
+  secretName: elasticsearch-license
+```
+
+
+## ILM policy
+
+You can manage ILM policy, with ILM resource like this:
+```yaml
+apiVersion: elk.k8s.webcenter.fr/v1alpha1
+kind: ElasticsearchILM
+metadata:
+  name: policy-log
+  namespace: elk
+spec:
+  elasticsearchRef:
+    name: cluster-sample
+  policy: |
+    {
+        "policy": {
+            "phases": {
+                "hot": {
+                    "min_age": "0ms",
+                    "actions": {
+                        "rollover": {
+                            "max_size": "5gb",
+                            "max_age": "7d"
+                        },
+                        "set_priority" : {
+                            "priority": 100
+                        }
+                    }
+                },
+                "warm": {
+                    "min_age": "0ms",
+                    "actions": {
+                        "forcemerge": {
+                            "max_num_segments": 1
+                        },
+                        "shrink": {
+                            "number_of_shards": 1
+                        },
+                        "set_priority" : {
+                            "priority": 50
+                        },
+                        "readonly": {}
+                    }
+                },
+                "delete": {
+                    "min_age": "0d",
+                    "actions": {
+                        "delete": {}
+                    }
+                }
+            }
+        }
+    }
 ```
 
 __License sample when Elasticsearch is deployed by ECK__:
@@ -44,17 +143,7 @@ spec:
 
 __License sample when Elasticsearch is not deployed by ECK__:
 ```yaml
-apiVersion: elk.k8s.webcenter.fr/v1alpha1
-kind: License
-metadata:
-  name: license
-  namespace: elk
-spec:
-  elasticsearchRef:
-    addresses:
-      - https://elasticsearch.domain.com
-    secretName: elasticsearch-credentials
-  secretName: elasticsearch-license
+
 
 ---
 piVersion: v1

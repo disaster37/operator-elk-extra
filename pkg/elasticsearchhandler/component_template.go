@@ -102,5 +102,5 @@ func (h *ElasticsearchHandlerImpl) ComponentTemplateGet(name string) (component 
 
 // ComponentTemplateDiff permit to check if 2 component template are the same
 func (h *ElasticsearchHandlerImpl) ComponentTemplateDiff(actual, expected *olivere.IndicesGetComponentTemplateData) (diff string, err error) {
-	return standartDiff(actual, expected, h.log)
+	return standartDiff(actual, expected, h.log, nil)
 }

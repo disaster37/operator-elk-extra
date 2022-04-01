@@ -109,7 +109,7 @@ func (mr *MockElasticsearchHandlerMockRecorder) ILMDelete(arg0 interface{}) *gom
 }
 
 // ILMDiff mocks base method.
-func (m *MockElasticsearchHandler) ILMDiff(arg0, arg1 map[string]interface{}) (string, error) {
+func (m *MockElasticsearchHandler) ILMDiff(arg0, arg1 *elastic.XPackIlmGetLifecycleResponse) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ILMDiff", arg0, arg1)
 	ret0, _ := ret[0].(string)
@@ -124,10 +124,10 @@ func (mr *MockElasticsearchHandlerMockRecorder) ILMDiff(arg0, arg1 interface{}) 
 }
 
 // ILMGet mocks base method.
-func (m *MockElasticsearchHandler) ILMGet(arg0 string) (map[string]interface{}, error) {
+func (m *MockElasticsearchHandler) ILMGet(arg0 string) (*elastic.XPackIlmGetLifecycleResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ILMGet", arg0)
-	ret0, _ := ret[0].(map[string]interface{})
+	ret0, _ := ret[0].(*elastic.XPackIlmGetLifecycleResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -139,7 +139,7 @@ func (mr *MockElasticsearchHandlerMockRecorder) ILMGet(arg0 interface{}) *gomock
 }
 
 // ILMUpdate mocks base method.
-func (m *MockElasticsearchHandler) ILMUpdate(arg0 string, arg1 map[string]interface{}) error {
+func (m *MockElasticsearchHandler) ILMUpdate(arg0 string, arg1 *elastic.XPackIlmGetLifecycleResponse) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ILMUpdate", arg0, arg1)
 	ret0, _ := ret[0].(error)

@@ -24,18 +24,26 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // ElasticsearchSnapshotRepositorySpec defines the desired state of ElasticsearchSnapshotRepository
+// +k8s:openapi-gen=true
 type ElasticsearchSnapshotRepositorySpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of ElasticsearchSnapshotRepository. Edit elasticsearchsnapshotrepository_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	ElasticsearchRefSpec `json:"elasticsearchRef,omitempty"`
+
+	// Type the Snapshot repository type
+	Type string `json:"type"`
+
+	// The config of snapshot repository
+	Settings string `json:"settings,omitempty"`
 }
 
 // ElasticsearchSnapshotRepositoryStatus defines the observed state of ElasticsearchSnapshotRepository
 type ElasticsearchSnapshotRepositoryStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+
+	Conditions []metav1.Condition `json:"conditions"`
 }
 
 //+kubebuilder:object:root=true
@@ -61,4 +69,14 @@ type ElasticsearchSnapshotRepositoryList struct {
 
 func init() {
 	SchemeBuilder.Register(&ElasticsearchSnapshotRepository{}, &ElasticsearchSnapshotRepositoryList{})
+}
+
+// GetObjectMeta permit to get the current ObjectMeta
+func (h *ElasticsearchSnapshotRepository) GetObjectMeta() metav1.ObjectMeta {
+	return h.ObjectMeta
+}
+
+// GetStatus permit to get the current status
+func (h *ElasticsearchSnapshotRepository) GetStatus() any {
+	return h.Status
 }

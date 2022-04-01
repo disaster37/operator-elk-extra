@@ -24,7 +24,6 @@ import (
 	condition "k8s.io/apimachinery/pkg/api/meta"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -33,7 +32,8 @@ import (
 	"github.com/disaster37/operator-sdk-extra/pkg/controller"
 	"github.com/disaster37/operator-sdk-extra/pkg/helper"
 	"github.com/disaster37/operator-sdk-extra/pkg/resource"
-	"github.com/sirupsen/logrus"
+	olivere "github.com/olivere/elastic/v7"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -43,11 +43,9 @@ const (
 
 // ElasticsearchILMReconciler reconciles a ElasticsearchILM object
 type ElasticsearchILMReconciler struct {
+	Reconciler
 	client.Client
-	Scheme     *runtime.Scheme
-	recorder   record.EventRecorder
-	log        *logrus.Entry
-	reconciler controller.Reconciler
+	Scheme *runtime.Scheme
 }
 
 //+kubebuilder:rbac:groups=elk.k8s.webcenter.fr,resources=elasticsearchilms,verbs=get;list;watch;create;update;patch;delete
@@ -82,19 +80,22 @@ func (r *ElasticsearchILMReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *ElasticsearchILMReconciler) SetLogger(log *logrus.Entry) {
-	r.log = log
-}
-
-func (r *ElasticsearchILMReconciler) SetRecorder(recorder record.EventRecorder) {
-	r.recorder = recorder
-}
-
 // Configure permit to init Elasticsearch handler
+// It also permit to init condition
 func (r *ElasticsearchILMReconciler) Configure(ctx context.Context, req ctrl.Request, resource resource.Resource) (meta any, err error) {
-	// Get elasticsearch handler / client
 	ilm := resource.(*elkv1alpha1.ElasticsearchILM)
-	meta, err = GetElasticsearchHandler(ctx, &ilm.Spec, r.Client, req, r.log)
+
+	// Init condition status if not exist
+	if condition.FindStatusCondition(ilm.Status.Conditions, ilmCondition) == nil {
+		condition.SetStatusCondition(&ilm.Status.Conditions, v1.Condition{
+			Type:   ilmCondition,
+			Status: v1.ConditionFalse,
+			Reason: "Initialize",
+		})
+	}
+
+	// Get elasticsearch handler / client
+	meta, err = GetElasticsearchHandler(ctx, &ilm.Spec, r.Client, r.dinamicClient, req, r.log)
 	if err != nil {
 		r.recorder.Eventf(resource, core.EventTypeWarning, "Failed", "Unable to init elasticsearch handler: %s", err.Error())
 		return nil, err
@@ -108,21 +109,12 @@ func (r *ElasticsearchILMReconciler) Read(ctx context.Context, resource resource
 	ilm := resource.(*elkv1alpha1.ElasticsearchILM)
 	esHandler := meta.(elasticsearchhandler.ElasticsearchHandler)
 
-	// Init condition status if not exist
-	if condition.FindStatusCondition(ilm.Status.Conditions, ilmCondition) == nil {
-		condition.SetStatusCondition(&ilm.Status.Conditions, v1.Condition{
-			Type:   ilmCondition,
-			Status: v1.ConditionFalse,
-			Reason: "Initialize",
-		})
-	}
-
 	// Read ILM policy from Elasticsearch
 	ilmPolicy, err := esHandler.ILMGet(ilm.Name)
 	if err != nil {
-		r.recorder.Eventf(resource, core.EventTypeWarning, "Failed", "Unable to get ILM policy from Elasticsearch: %s", err.Error())
-		return res, err
+		return res, errors.Wrap(err, "Unable to get ILM policy from Elasticsearch")
 	}
+
 	data["policy"] = ilmPolicy
 	return res, nil
 }
@@ -132,35 +124,15 @@ func (r *ElasticsearchILMReconciler) Create(ctx context.Context, resource resour
 
 	esHandler := meta.(elasticsearchhandler.ElasticsearchHandler)
 	ilm := resource.(*elkv1alpha1.ElasticsearchILM)
-	policy := make(map[string]any)
-
-	// handler condition status if error
-	defer func() {
-		if err != nil {
-			condition.SetStatusCondition(&ilm.Status.Conditions, v1.Condition{
-				Type:    ilmCondition,
-				Status:  v1.ConditionFalse,
-				Reason:  "Failed",
-				Message: err.Error(),
-			})
-		}
-	}()
+	policy := &olivere.XPackIlmGetLifecycleResponse{}
 
 	// Create policy on Elasticsearch
 	if err = json.Unmarshal([]byte(ilm.Spec.Policy), &policy); err != nil {
-		return res, err
+		return res, errors.Wrap(err, "Error on Policy format")
 	}
 	if err = esHandler.ILMUpdate(ilm.Name, policy); err != nil {
-		return res, err
+		return res, errors.Wrap(err, "Error when update policy")
 	}
-
-	// Update status
-	condition.SetStatusCondition(&ilm.Status.Conditions, v1.Condition{
-		Type:    ilmCondition,
-		Status:  v1.ConditionTrue,
-		Reason:  "Success",
-		Message: "ILM successfully updated",
-	})
 
 	return res, nil
 }
@@ -176,7 +148,7 @@ func (r *ElasticsearchILMReconciler) Delete(ctx context.Context, resource resour
 	ilm := resource.(*elkv1alpha1.ElasticsearchILM)
 
 	if err = esHandler.ILMDelete(ilm.Name); err != nil {
-		return err
+		return errors.Wrap(err, "Error when delete policy")
 	}
 
 	return nil
@@ -187,15 +159,18 @@ func (r *ElasticsearchILMReconciler) Delete(ctx context.Context, resource resour
 func (r *ElasticsearchILMReconciler) Diff(resource resource.Resource, data map[string]interface{}, meta interface{}) (diff controller.Diff, err error) {
 	esHandler := meta.(elasticsearchhandler.ElasticsearchHandler)
 	ilm := resource.(*elkv1alpha1.ElasticsearchILM)
-	expectedPolicy := make(map[string]any)
-	var currentPolicy map[string]any
+	expectedPolicy := &olivere.XPackIlmGetLifecycleResponse{}
+	var currentPolicy *olivere.XPackIlmGetLifecycleResponse
 	var d any
 
 	d, err = helper.Get(data, "policy")
 	if err != nil {
 		return diff, err
 	}
-	currentPolicy = d.(map[string]any)
+	currentPolicy = d.(*olivere.XPackIlmGetLifecycleResponse)
+	if err = json.Unmarshal([]byte(ilm.Spec.Policy), expectedPolicy); err != nil {
+		return diff, err
+	}
 
 	diff = controller.Diff{
 		NeedCreate: false,
@@ -219,16 +194,60 @@ func (r *ElasticsearchILMReconciler) Diff(resource resource.Resource, data map[s
 		return diff, nil
 	}
 
+	return
+}
+
+// OnError permit to set status condition on the right state and record error
+func (r *ElasticsearchILMReconciler) OnError(ctx context.Context, resource resource.Resource, data map[string]any, meta any, err error) {
+	ilm := resource.(*elkv1alpha1.ElasticsearchILM)
+	r.log.Error(err)
+	r.recorder.Event(resource, core.EventTypeWarning, "Failed", err.Error())
+
+	condition.SetStatusCondition(&ilm.Status.Conditions, v1.Condition{
+		Type:    ilmCondition,
+		Status:  v1.ConditionFalse,
+		Reason:  "Failed",
+		Message: err.Error(),
+	})
+}
+
+// OnSuccess permit to set status condition on the right state is everithink is good
+func (r *ElasticsearchILMReconciler) OnSuccess(ctx context.Context, resource resource.Resource, data map[string]any, meta any, diff controller.Diff) (err error) {
+	ilm := resource.(*elkv1alpha1.ElasticsearchILM)
+
+	if diff.NeedCreate {
+		condition.SetStatusCondition(&ilm.Status.Conditions, v1.Condition{
+			Type:    ilmCondition,
+			Status:  v1.ConditionTrue,
+			Reason:  "Success",
+			Message: "ILM policy successfully created",
+		})
+
+		return nil
+	}
+
+	if diff.NeedUpdate {
+		condition.SetStatusCondition(&ilm.Status.Conditions, v1.Condition{
+			Type:    ilmCondition,
+			Status:  v1.ConditionTrue,
+			Reason:  "Success",
+			Message: "ILM policy successfully updated",
+		})
+
+		return nil
+	}
+
 	// Update condition status if needed
 	if condition.IsStatusConditionPresentAndEqual(ilm.Status.Conditions, ilmCondition, v1.ConditionFalse) {
 		condition.SetStatusCondition(&ilm.Status.Conditions, v1.Condition{
-			Type:   ilmCondition,
-			Reason: "Success",
-			Status: v1.ConditionTrue,
+			Type:    ilmCondition,
+			Reason:  "Success",
+			Status:  v1.ConditionTrue,
+			Message: "ILM policy already set",
 		})
 
-		r.recorder.Event(resource, core.EventTypeNormal, "Completed", "ILM already set")
+		r.recorder.Event(resource, core.EventTypeNormal, "Completed", "ILM policy already set")
 	}
 
-	return
+	return nil
 }

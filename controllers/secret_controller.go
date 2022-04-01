@@ -28,7 +28,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -51,10 +50,9 @@ func (h *Secret) GetStatus() any {
 
 // SecretReconciler reconciles a Secret object
 type SecretReconciler struct {
+	Reconciler
 	client.Client
-	Scheme   *runtime.Scheme
-	recorder record.EventRecorder
-	log      *logrus.Entry
+	Scheme *runtime.Scheme
 }
 
 //+kubebuilder:rbac:groups=,resources=secrets,verbs=get;list;watch;update;patch
@@ -130,14 +128,6 @@ func (r *SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&core.Secret{}).
 		WithEventFilter(viewSecretAnnotationPredicate()).
 		Complete(r)
-}
-
-func (r *SecretReconciler) SetLogger(log *logrus.Entry) {
-	r.log = log
-}
-
-func (r *SecretReconciler) SetRecorder(recorder record.EventRecorder) {
-	r.recorder = recorder
 }
 
 func viewSecretAnnotationPredicate() predicate.Predicate {

@@ -102,5 +102,5 @@ func (h *ElasticsearchHandlerImpl) SnapshotRepositoryGet(name string) (repositor
 
 // SnapshotRepositoryDiff permit to check if 2 repositories are the same
 func (h *ElasticsearchHandlerImpl) SnapshotRepositoryDiff(actual, expected *olivere.SnapshotRepositoryMetaData) (diffStr string, err error) {
-	return standartDiff(actual, expected, h.log)
+	return standartDiff(actual, expected, h.log, nil)
 }

@@ -10,8 +10,12 @@ import (
 	"github.com/pkg/errors"
 )
 
+var ignorePolicyDiff = map[string]any{
+	"phases.delete.actions.delete.delete_searchable_snapshot": true,
+}
+
 // ILMUpdate permit to update or create policy
-func (h *ElasticsearchHandlerImpl) ILMUpdate(name string, policy map[string]any) (err error) {
+func (h *ElasticsearchHandlerImpl) ILMUpdate(name string, policy *olivere.XPackIlmGetLifecycleResponse) (err error) {
 
 	b, err := json.Marshal(policy)
 	if err != nil {
@@ -66,7 +70,7 @@ func (h *ElasticsearchHandlerImpl) ILMDelete(name string) (err error) {
 }
 
 // ILMGet permit to get policy
-func (h *ElasticsearchHandlerImpl) ILMGet(name string) (policy map[string]any, err error) {
+func (h *ElasticsearchHandlerImpl) ILMGet(name string) (policy *olivere.XPackIlmGetLifecycleResponse, err error) {
 
 	h.log.Debugf("Name: %s", name)
 
@@ -92,17 +96,25 @@ func (h *ElasticsearchHandlerImpl) ILMGet(name string) (policy map[string]any, e
 
 	h.log.Debugf("Get life cycle policy %s successfully:\n%s", name, string(b))
 
-	policyResp := &olivere.XPackIlmGetLifecycleResponse{}
-	err = json.Unmarshal(b, policyResp)
+	policyResp := make(map[string]*olivere.XPackIlmGetLifecycleResponse)
+	err = json.Unmarshal(b, &policyResp)
 	if err != nil {
 		return nil, err
 	}
 
-	return policyResp.Policy, nil
+	return policyResp[name], nil
 
 }
 
 // ILMDiff permit to check if 2 policy are the same
-func (h *ElasticsearchHandlerImpl) ILMDiff(actual, expected map[string]any) (diffStr string, err error) {
-	return standartDiff(actual, expected, h.log)
+func (h *ElasticsearchHandlerImpl) ILMDiff(actual, expected *olivere.XPackIlmGetLifecycleResponse) (diffStr string, err error) {
+	var actualPolicy, expectedPolicy map[string]any
+
+	if actual != nil {
+		actualPolicy = actual.Policy
+	}
+	if expected != nil {
+		expectedPolicy = expected.Policy
+	}
+	return standartDiff(actualPolicy, expectedPolicy, h.log, ignorePolicyDiff)
 }
