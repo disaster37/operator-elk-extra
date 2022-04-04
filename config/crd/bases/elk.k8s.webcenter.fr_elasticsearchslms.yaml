@@ -35,6 +35,30 @@ spec:
           spec:
             description: ElasticsearchSLMSpec defines the desired state of ElasticsearchSLM
             properties:
+              config:
+                description: ElasticsearchSLMConfig is the config sub section
+                properties:
+                  expand_wildcards:
+                    type: string
+                  feature_states:
+                    items:
+                      type: string
+                    type: array
+                  ignore_unavailable:
+                    type: boolean
+                  include_global_state:
+                    type: boolean
+                  indices:
+                    items:
+                      type: string
+                    type: array
+                  metadata:
+                    additionalProperties:
+                      type: string
+                    type: object
+                  partial:
+                    type: boolean
+                type: object
               elasticsearchRef:
                 properties:
                   addresses:
@@ -54,11 +78,30 @@ spec:
                       is the data
                     type: string
                 type: object
-              policy:
-                description: Policy is the raw policy on JSON
+              name:
+                type: string
+              repository:
+                type: string
+              retention:
+                description: ElasticsearchSLMRetention is the retention sub section
+                properties:
+                  expire_after:
+                    type: string
+                  max_count:
+                    format: int64
+                    type: integer
+                  min_count:
+                    format: int64
+                    type: integer
+                type: object
+              schedule:
                 type: string
             required:
-            - policy
+            - config
+            - elasticsearchRef
+            - name
+            - repository
+            - schedule
             type: object
           status:
             description: ElasticsearchSLMStatus defines the observed state of ElasticsearchSLM

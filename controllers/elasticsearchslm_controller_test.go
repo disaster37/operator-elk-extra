@@ -9,6 +9,7 @@ import (
 	"github.com/disaster37/operator-elk-extra/pkg/elasticsearchhandler"
 	"github.com/disaster37/operator-elk-extra/pkg/helpers"
 	"github.com/golang/mock/gomock"
+	olivere "github.com/olivere/elastic/v7"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -38,6 +39,9 @@ func (t *ControllerTestSuite) TestElasticsearchSLMReconciler() {
 		Name:      slmName,
 		Namespace: "default",
 	}
+	t.mockElasticsearchHandler.EXPECT().SnapshotRepositoryGet(gomock.Any()).AnyTimes().Return(&olivere.SnapshotRepositoryMetaData{
+		Type: "url",
+	}, nil)
 	t.mockElasticsearchHandler.EXPECT().SLMGet(gomock.Any()).AnyTimes().DoAndReturn(func(name string) (*elasticsearchhandler.SnapshotLifecyclePolicySpec, error) {
 
 		switch test {
@@ -171,22 +175,19 @@ func (t *ControllerTestSuite) TestElasticsearchSLMReconciler() {
 			ElasticsearchRefSpec: elkv1alpha1.ElasticsearchRefSpec{
 				Name: "test",
 			},
-			Policy: `
-			{
-				"schedule": "0 30 1 * * ?", 
-				"name": "<daily-snap-{now/d}>", 
-				"repository": "my_repository", 
-				"config": { 
-				  "indices": ["data-*", "important"], 
-				  "ignore_unavailable": false,
-				  "include_global_state": false
-				},
-				"retention": { 
-				  "expire_after": "30d", 
-				  "min_count": 5, 
-				  "max_count": 50 
-				}
-			}`,
+			Schedule:   "0 30 1 * * ?",
+			Name:       "<daily-snap-{now/d}>",
+			Repository: "my_repository",
+			Config: elkv1alpha1.ElasticsearchSLMConfig{
+				Indices:            []string{"data-*", "important"},
+				IgnoreUnavailable:  false,
+				IncludeGlobalState: false,
+			},
+			Retention: &elkv1alpha1.ElasticsearchSLMRetention{
+				ExpireAfter: "30d",
+				MinCount:    5,
+				MaxCount:    50,
+			},
 		},
 	}
 	if err = t.k8sClient.Create(context.Background(), toCreate); err != nil {
@@ -217,21 +218,7 @@ func (t *ControllerTestSuite) TestElasticsearchSLMReconciler() {
 	if err := t.k8sClient.Get(context.Background(), key, fetched); err != nil {
 		t.T().Fatal(err)
 	}
-	fetched.Spec.Policy = `{
-		"schedule": "0 30 1 * * ?", 
-		"name": "<daily-snap-{now/d}>", 
-		"repository": "my_repository", 
-		"config": { 
-		  "indices": ["data-*", "important"], 
-		  "ignore_unavailable": false,
-		  "include_global_state": false
-		},
-		"retention": { 
-		  "expire_after": "30d", 
-		  "min_count": 6, 
-		  "max_count": 50 
-		}
-	}`
+	fetched.Spec.Retention.MinCount = 6
 	if err = t.k8sClient.Update(context.Background(), fetched); err != nil {
 		t.T().Fatal(err)
 	}

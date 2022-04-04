@@ -18,7 +18,6 @@ package controllers
 
 import (
 	"context"
-	"encoding/json"
 
 	core "k8s.io/api/core/v1"
 	condition "k8s.io/apimachinery/pkg/api/meta"
@@ -124,23 +123,20 @@ func (r *ElasticsearchSLMReconciler) Create(ctx context.Context, resource resour
 
 	esHandler := meta.(elasticsearchhandler.ElasticsearchHandler)
 	slm := resource.(*elkv1alpha1.ElasticsearchSLM)
-	policy := &elasticsearchhandler.SnapshotLifecyclePolicySpec{}
+	policy := slm.ToPolicy()
 
 	// Before create policy, check if repository already exist
-	repo, err := esHandler.SnapshotRepositoryGet(policy.Repository)
+	repo, err := esHandler.SnapshotRepositoryGet(slm.Spec.Repository)
 	if err != nil {
 		return res, errors.Wrap(err, "Error when get snapshot repository to check if exist before create SLM policy")
 	}
 	if repo == nil {
-		r.log.Warnf("Snapshot repository %s not yet exist, skip it", policy.Repository)
+		r.log.Warnf("Snapshot repository %s not yet exist, skip it", slm.Spec.Repository)
 		r.recorder.Eventf(resource, core.EventTypeWarning, "Skip", "Snapshot repository %s not yet exist, wait it", policy.Repository)
 		return ctrl.Result{RequeueAfter: waitDurationWhenError}, nil
 	}
 
 	// Create policy on Elasticsearch
-	if err = json.Unmarshal([]byte(slm.Spec.Policy), &policy); err != nil {
-		return res, errors.Wrap(err, "Error on Policy format")
-	}
 	if err = esHandler.SLMUpdate(slm.Name, policy); err != nil {
 		return res, errors.Wrap(err, "Error when update policy")
 	}
@@ -170,7 +166,6 @@ func (r *ElasticsearchSLMReconciler) Delete(ctx context.Context, resource resour
 func (r *ElasticsearchSLMReconciler) Diff(resource resource.Resource, data map[string]interface{}, meta interface{}) (diff controller.Diff, err error) {
 	esHandler := meta.(elasticsearchhandler.ElasticsearchHandler)
 	slm := resource.(*elkv1alpha1.ElasticsearchSLM)
-	expectedPolicy := &elasticsearchhandler.SnapshotLifecyclePolicySpec{}
 	var currentPolicy *elasticsearchhandler.SnapshotLifecyclePolicySpec
 	var d any
 
@@ -179,9 +174,6 @@ func (r *ElasticsearchSLMReconciler) Diff(resource resource.Resource, data map[s
 		return diff, err
 	}
 	currentPolicy = d.(*elasticsearchhandler.SnapshotLifecyclePolicySpec)
-	if err = json.Unmarshal([]byte(slm.Spec.Policy), expectedPolicy); err != nil {
-		return diff, err
-	}
 
 	diff = controller.Diff{
 		NeedCreate: false,
@@ -194,7 +186,7 @@ func (r *ElasticsearchSLMReconciler) Diff(resource resource.Resource, data map[s
 		return diff, nil
 	}
 
-	diffStr, err := esHandler.SLMDiff(currentPolicy, expectedPolicy)
+	diffStr, err := esHandler.SLMDiff(currentPolicy, slm.ToPolicy())
 	if err != nil {
 		return diff, err
 	}

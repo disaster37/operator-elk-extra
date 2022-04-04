@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/disaster37/operator-elk-extra/pkg/elasticsearchhandler"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -36,11 +37,9 @@ type ElasticsearchSLMSpec struct {
 	Repository string                     `json:"repository"`
 	Config     ElasticsearchSLMConfig     `json:"config"`
 	Retention  *ElasticsearchSLMRetention `json:"retention,omitempty"`
-
-	// Policy is the raw policy on JSON
-	Policy string `json:"policy"`
 }
 
+// ElasticsearchSLMConfig is the config sub section
 type ElasticsearchSLMConfig struct {
 	ExpendWildcards    string            `json:"expand_wildcards,omitempty"`
 	IgnoreUnavailable  bool              `json:"ignore_unavailable,omitempty"`
@@ -51,6 +50,7 @@ type ElasticsearchSLMConfig struct {
 	Partial            bool              `json:"partial,omitempty"`
 }
 
+// ElasticsearchSLMRetention is the retention sub section
 type ElasticsearchSLMRetention struct {
 	ExpireAfter string `json:"expire_after,omitempty"`
 	MaxCount    int64  `json:"max_count,omitempty"`
@@ -98,4 +98,31 @@ func (h *ElasticsearchSLM) GetObjectMeta() metav1.ObjectMeta {
 // GetStatus permit to get the current status
 func (h *ElasticsearchSLM) GetStatus() any {
 	return h.Status
+}
+
+func (h *ElasticsearchSLM) ToPolicy() *elasticsearchhandler.SnapshotLifecyclePolicySpec {
+	policy := &elasticsearchhandler.SnapshotLifecyclePolicySpec{
+		Schedule:   h.Spec.Schedule,
+		Name:       h.Spec.Name,
+		Repository: h.Spec.Repository,
+		Config: elasticsearchhandler.ElasticsearchSLMConfig{
+			ExpendWildcards:    h.Spec.Config.ExpendWildcards,
+			IgnoreUnavailable:  h.Spec.Config.IgnoreUnavailable,
+			IncludeGlobalState: h.Spec.Config.IncludeGlobalState,
+			Indices:            h.Spec.Config.Indices,
+			FeatureStates:      h.Spec.Config.FeatureStates,
+			Metadata:           h.Spec.Config.Metadata,
+			Partial:            h.Spec.Config.Partial,
+		},
+	}
+
+	if h.Spec.Retention != nil {
+		policy.Retention = &elasticsearchhandler.ElasticsearchSLMRetention{
+			ExpireAfter: h.Spec.Retention.ExpireAfter,
+			MaxCount:    h.Spec.Retention.MaxCount,
+			MinCount:    h.Spec.Retention.MinCount,
+		}
+	}
+
+	return policy
 }

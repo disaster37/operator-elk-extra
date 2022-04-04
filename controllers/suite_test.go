@@ -147,6 +147,18 @@ func (t *ControllerTestSuite) SetupSuite() {
 	if err = repositoryReconciler.SetupWithManager(k8sManager); err != nil {
 		panic(err)
 	}
+	slmReconciler := &ElasticsearchSLMReconciler{
+		Client: k8sClient,
+		Scheme: scheme.Scheme,
+	}
+	slmReconciler.SetLogger(logrus.WithFields(logrus.Fields{
+		"type": "slmController",
+	}))
+	slmReconciler.SetRecorder(k8sManager.GetEventRecorderFor("slm-controller"))
+	slmReconciler.SetReconsiler(mock.NewMockReconciler(slmReconciler, t.mockElasticsearchHandler))
+	if err = slmReconciler.SetupWithManager(k8sManager); err != nil {
+		panic(err)
+	}
 
 	go func() {
 		err = k8sManager.Start(ctrl.SetupSignalHandler())

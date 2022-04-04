@@ -14,11 +14,29 @@ type SnapshotLifecyclePolicy map[string]*SnapshotLifecyclePolicyGet
 
 // SnapshotLifecyclePolicySpec is the snapshot lifecycle policy object
 type SnapshotLifecyclePolicySpec struct {
-	Schedule   string `json:"schedule"`
-	Name       string `json:"name"`
-	Repository string `json:"repository"`
-	Configs    any    `json:"config,omitempty"`
-	Retention  any    `json:"retention,omitempty"`
+	Schedule   string                     `json:"schedule"`
+	Name       string                     `json:"name"`
+	Repository string                     `json:"repository"`
+	Config     ElasticsearchSLMConfig     `json:"config"`
+	Retention  *ElasticsearchSLMRetention `json:"retention,omitempty"`
+}
+
+// ElasticsearchSLMConfig is the config sub section
+type ElasticsearchSLMConfig struct {
+	ExpendWildcards    string            `json:"expand_wildcards,omitempty"`
+	IgnoreUnavailable  bool              `json:"ignore_unavailable,omitempty"`
+	IncludeGlobalState bool              `json:"include_global_state,omitempty"`
+	Indices            []string          `json:"indices,omitempty"`
+	FeatureStates      []string          `json:"feature_states,omitempty"`
+	Metadata           map[string]string `json:"metadata,omitempty"`
+	Partial            bool              `json:"partial,omitempty"`
+}
+
+// ElasticsearchSLMRetention is the retention sub section
+type ElasticsearchSLMRetention struct {
+	ExpireAfter string `json:"expire_after,omitempty"`
+	MaxCount    int64  `json:"max_count,omitempty"`
+	MinCount    int64  `json:"min_count,omitempty"`
 }
 
 // SnapshotLifecyclePolicyGet is the policy

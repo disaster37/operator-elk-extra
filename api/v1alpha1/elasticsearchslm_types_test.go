@@ -28,7 +28,9 @@ func (t *V1alpha1TestSuite) TestElasticsearchSLMCRUD() {
 			Namespace: key.Namespace,
 		},
 		Spec: ElasticsearchSLMSpec{
-			Policy: "fake",
+			Schedule:   "test",
+			Name:       "test",
+			Repository: "test",
 		},
 	}
 	err = t.k8sClient.Create(context.Background(), created)
@@ -54,9 +56,7 @@ func (t *V1alpha1TestSuite) TestElasticsearchSLMGetObjectMeta() {
 	}
 	test := &ElasticsearchSLM{
 		ObjectMeta: meta,
-		Spec: ElasticsearchSLMSpec{
-			Policy: "fake",
-		},
+		Spec:       ElasticsearchSLMSpec{},
 	}
 
 	assert.Equal(t.T(), meta, test.GetObjectMeta())
@@ -71,9 +71,7 @@ func (t *V1alpha1TestSuite) TestElasticsearchSLMGetStatus() {
 		},
 	}
 	test := &ElasticsearchSLM{
-		Spec: ElasticsearchSLMSpec{
-			Policy: "fake",
-		},
+		Spec:   ElasticsearchSLMSpec{},
 		Status: status,
 	}
 
