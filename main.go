@@ -207,18 +207,27 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Snapshot repository controller
+	componentTemplateController := &controllers.ElasticsearchComponentTemplateReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}
+	componentTemplateController.SetLogger(log.WithFields(logrus.Fields{
+		"type": "ComponentTemplateController",
+	}))
+	componentTemplateController.SetRecorder(mgr.GetEventRecorderFor("component-template-controller"))
+	componentTemplateController.SetReconsiler(componentTemplateController)
+	componentTemplateController.SetDinamicClient(dinamicClient)
+	if err = componentTemplateController.SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ComponentTemplate")
+		os.Exit(1)
+	}
+
 	if err = (&controllers.ElasticsearchIndexTemplateReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ElasticsearchIndexTemplate")
-		os.Exit(1)
-	}
-	if err = (&controllers.ElasticsearchComponentTemplateReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ElasticsearchComponentTemplate")
 		os.Exit(1)
 	}
 	if err = (&controllers.ElasticsearchWatcherReconciler{

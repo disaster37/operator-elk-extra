@@ -159,6 +159,18 @@ func (t *ControllerTestSuite) SetupSuite() {
 	if err = slmReconciler.SetupWithManager(k8sManager); err != nil {
 		panic(err)
 	}
+	componentTemplateReconciler := &ElasticsearchComponentTemplateReconciler{
+		Client: k8sClient,
+		Scheme: scheme.Scheme,
+	}
+	componentTemplateReconciler.SetLogger(logrus.WithFields(logrus.Fields{
+		"type": "componentTemplateController",
+	}))
+	componentTemplateReconciler.SetRecorder(k8sManager.GetEventRecorderFor("component-template-controller"))
+	componentTemplateReconciler.SetReconsiler(mock.NewMockReconciler(componentTemplateReconciler, t.mockElasticsearchHandler))
+	if err = componentTemplateReconciler.SetupWithManager(k8sManager); err != nil {
+		panic(err)
+	}
 
 	go func() {
 		err = k8sManager.Start(ctrl.SetupSignalHandler())
