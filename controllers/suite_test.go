@@ -33,9 +33,10 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	"github.com/disaster37/operator-sdk-extra/pkg/mock"
+
 	elkv1alpha1 "github.com/disaster37/operator-elk-extra/api/v1alpha1"
 	"github.com/disaster37/operator-elk-extra/pkg/mocks"
-	"github.com/disaster37/operator-sdk-extra/pkg/mock"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -187,6 +188,32 @@ func (t *ControllerTestSuite) SetupSuite() {
 	indexTemplateReconciler.SetRecorder(k8sManager.GetEventRecorderFor("index-template-controller"))
 	indexTemplateReconciler.SetReconsiler(mock.NewMockReconciler(indexTemplateReconciler, t.mockElasticsearchHandler))
 	if err = indexTemplateReconciler.SetupWithManager(k8sManager); err != nil {
+		panic(err)
+	}
+
+	elasticsearchRoleReconciler := &ElasticsearchRoleReconciler{
+		Client: k8sClient,
+		Scheme: scheme.Scheme,
+	}
+	elasticsearchRoleReconciler.SetLogger(logrus.WithFields(logrus.Fields{
+		"type": "elasticsearchRoleController",
+	}))
+	elasticsearchRoleReconciler.SetRecorder(k8sManager.GetEventRecorderFor("es-role-controller"))
+	elasticsearchRoleReconciler.SetReconsiler(mock.NewMockReconciler(elasticsearchRoleReconciler, t.mockElasticsearchHandler))
+	if err = elasticsearchRoleReconciler.SetupWithManager(k8sManager); err != nil {
+		panic(err)
+	}
+
+	roleMappingReconciler := &RoleMappingReconciler{
+		Client: k8sClient,
+		Scheme: scheme.Scheme,
+	}
+	roleMappingReconciler.SetLogger(logrus.WithFields(logrus.Fields{
+		"type": "roleMappingController",
+	}))
+	roleMappingReconciler.SetRecorder(k8sManager.GetEventRecorderFor("role-mapping-controller"))
+	roleMappingReconciler.SetReconsiler(mock.NewMockReconciler(roleMappingReconciler, t.mockElasticsearchHandler))
+	if err = roleMappingReconciler.SetupWithManager(k8sManager); err != nil {
 		panic(err)
 	}
 

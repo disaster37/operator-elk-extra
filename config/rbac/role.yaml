@@ -100,6 +100,32 @@ rules:
 - apiGroups:
   - elk.k8s.webcenter.fr
   resources:
+  - elasticsearchroles
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - elk.k8s.webcenter.fr
+  resources:
+  - elasticsearchroles/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - elk.k8s.webcenter.fr
+  resources:
+  - elasticsearchroles/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - elk.k8s.webcenter.fr
+  resources:
   - elasticsearchslms
   verbs:
   - create
@@ -197,6 +223,58 @@ rules:
   - elk.k8s.webcenter.fr
   resources:
   - licenses/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - elk.k8s.webcenter.fr
+  resources:
+  - rolemappings
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - elk.k8s.webcenter.fr
+  resources:
+  - rolemappings/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - elk.k8s.webcenter.fr
+  resources:
+  - rolemappings/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - elk.k8s.webcenter.fr
+  resources:
+  - users
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - elk.k8s.webcenter.fr
+  resources:
+  - users/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - elk.k8s.webcenter.fr
+  resources:
+  - users/status
   verbs:
   - get
   - patch

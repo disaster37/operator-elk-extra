@@ -25,9 +25,6 @@ import (
 	"k8s.io/client-go/dynamic"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
-	elkv1alpha1 "github.com/disaster37/operator-elk-extra/api/v1alpha1"
-	"github.com/disaster37/operator-elk-extra/controllers"
-	"github.com/disaster37/operator-elk-extra/pkg/helpers"
 	"github.com/sirupsen/logrus"
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -37,6 +34,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	elkv1alpha1 "github.com/disaster37/operator-elk-extra/api/v1alpha1"
+	"github.com/disaster37/operator-elk-extra/controllers"
+	"github.com/disaster37/operator-elk-extra/pkg/helpers"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -239,11 +240,50 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Elasticsearch role controller
+	elasticsearchRoleController := &controllers.ElasticsearchRoleReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}
+	elasticsearchRoleController.SetLogger(log.WithFields(logrus.Fields{
+		"type": "ElasticsearchRoleController",
+	}))
+	elasticsearchRoleController.SetRecorder(mgr.GetEventRecorderFor("es-role-controller"))
+	elasticsearchRoleController.SetReconsiler(elasticsearchRoleController)
+	elasticsearchRoleController.SetDinamicClient(dinamicClient)
+	if err = elasticsearchRoleController.SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ElasticsearchRole")
+		os.Exit(1)
+	}
+
+	// Role mapping controller
+	roleMappingController := &controllers.RoleMappingReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}
+	roleMappingController.SetLogger(log.WithFields(logrus.Fields{
+		"type": "RoleMappingController",
+	}))
+	roleMappingController.SetRecorder(mgr.GetEventRecorderFor("role-mapping-controller"))
+	roleMappingController.SetReconsiler(roleMappingController)
+	roleMappingController.SetDinamicClient(dinamicClient)
+	if err = roleMappingController.SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "RoleMapping")
+		os.Exit(1)
+	}
+
 	if err = (&controllers.ElasticsearchWatcherReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ElasticsearchWatcher")
+		os.Exit(1)
+	}
+	if err = (&controllers.UserReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "User")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder
