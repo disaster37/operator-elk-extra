@@ -58,6 +58,7 @@ spec:
                 description: Policy is the raw policy on JSON
                 type: string
             required:
+            - elasticsearchRef
             - policy
             type: object
           status:

@@ -63,6 +63,7 @@ spec:
                 description: Type the Snapshot repository type
                 type: string
             required:
+            - elasticsearchRef
             - type
             type: object
           status:

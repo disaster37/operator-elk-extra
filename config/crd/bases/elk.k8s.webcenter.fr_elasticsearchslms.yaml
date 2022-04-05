@@ -36,7 +36,7 @@ spec:
             description: ElasticsearchSLMSpec defines the desired state of ElasticsearchSLM
             properties:
               config:
-                description: ElasticsearchSLMConfig is the config sub section
+                description: Config is the config backup
                 properties:
                   expand_wildcards:
                     type: string
@@ -79,11 +79,13 @@ spec:
                     type: string
                 type: object
               name:
+                description: Name is the template name to generte final name
                 type: string
               repository:
+                description: Repository is the target repository to store backup
                 type: string
               retention:
-                description: ElasticsearchSLMRetention is the retention sub section
+                description: Retention is the retention policy
                 properties:
                   expire_after:
                     type: string
@@ -95,6 +97,7 @@ spec:
                     type: integer
                 type: object
               schedule:
+                description: Schedule is schedule policy
                 type: string
             required:
             - config

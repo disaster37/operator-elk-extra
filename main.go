@@ -207,7 +207,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Snapshot repository controller
+	// Component template controller
 	componentTemplateController := &controllers.ElasticsearchComponentTemplateReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
@@ -223,13 +223,22 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.ElasticsearchIndexTemplateReconciler{
+	// Index template controller
+	indexTemplateController := &controllers.ElasticsearchIndexTemplateReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ElasticsearchIndexTemplate")
+	}
+	indexTemplateController.SetLogger(log.WithFields(logrus.Fields{
+		"type": "IndexTemplateController",
+	}))
+	indexTemplateController.SetRecorder(mgr.GetEventRecorderFor("index-template-controller"))
+	indexTemplateController.SetReconsiler(indexTemplateController)
+	indexTemplateController.SetDinamicClient(dinamicClient)
+	if err = indexTemplateController.SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "IndexTemplate")
 		os.Exit(1)
 	}
+
 	if err = (&controllers.ElasticsearchWatcherReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),

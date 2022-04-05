@@ -65,6 +65,8 @@ spec:
               settings:
                 description: Settings is the component setting
                 type: string
+            required:
+            - elasticsearchRef
             type: object
           status:
             description: ElasticsearchComponentTemplateStatus defines the observed

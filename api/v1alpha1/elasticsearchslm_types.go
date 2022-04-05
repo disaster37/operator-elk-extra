@@ -32,29 +32,59 @@ type ElasticsearchSLMSpec struct {
 
 	ElasticsearchRefSpec `json:"elasticsearchRef"`
 
-	Schedule   string                     `json:"schedule"`
-	Name       string                     `json:"name"`
-	Repository string                     `json:"repository"`
-	Config     ElasticsearchSLMConfig     `json:"config"`
-	Retention  *ElasticsearchSLMRetention `json:"retention,omitempty"`
+	// Schedule is schedule policy
+	Schedule string `json:"schedule"`
+
+	// Name is the template name to generte final name
+	Name string `json:"name"`
+
+	// Repository is the target repository to store backup
+	Repository string `json:"repository"`
+
+	// Config is the config backup
+	Config ElasticsearchSLMConfig `json:"config"`
+
+	//Retention is the retention policy
+	// +optional
+	Retention *ElasticsearchSLMRetention `json:"retention,omitempty"`
 }
 
 // ElasticsearchSLMConfig is the config sub section
 type ElasticsearchSLMConfig struct {
-	ExpendWildcards    string            `json:"expand_wildcards,omitempty"`
-	IgnoreUnavailable  bool              `json:"ignore_unavailable,omitempty"`
-	IncludeGlobalState bool              `json:"include_global_state,omitempty"`
-	Indices            []string          `json:"indices,omitempty"`
-	FeatureStates      []string          `json:"feature_states,omitempty"`
-	Metadata           map[string]string `json:"metadata,omitempty"`
-	Partial            bool              `json:"partial,omitempty"`
+
+	// +optional
+	ExpendWildcards string `json:"expand_wildcards,omitempty"`
+
+	// +optional
+	IgnoreUnavailable bool `json:"ignore_unavailable,omitempty"`
+
+	// +optional
+	IncludeGlobalState bool `json:"include_global_state,omitempty"`
+
+	// +optional
+	Indices []string `json:"indices,omitempty"`
+
+	// +optional
+	FeatureStates []string `json:"feature_states,omitempty"`
+
+	// +optional
+	Metadata map[string]string `json:"metadata,omitempty"`
+
+	// +optional
+	Partial bool `json:"partial,omitempty"`
 }
 
 // ElasticsearchSLMRetention is the retention sub section
 type ElasticsearchSLMRetention struct {
+
+	// +optional
 	ExpireAfter string `json:"expire_after,omitempty"`
-	MaxCount    int64  `json:"max_count,omitempty"`
-	MinCount    int64  `json:"min_count,omitempty"`
+
+	// +optional
+	MaxCount int64 `json:"max_count,omitempty"`
+
+	// +optional
+	MinCount int64 `json:"min_count,omitempty"`
 }
 
 // ElasticsearchSLMStatus defines the observed state of ElasticsearchSLM

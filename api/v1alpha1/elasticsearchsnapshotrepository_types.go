@@ -29,12 +29,13 @@ type ElasticsearchSnapshotRepositorySpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	ElasticsearchRefSpec `json:"elasticsearchRef,omitempty"`
+	ElasticsearchRefSpec `json:"elasticsearchRef"`
 
 	// Type the Snapshot repository type
 	Type string `json:"type"`
 
 	// The config of snapshot repository
+	// +optional
 	Settings string `json:"settings,omitempty"`
 }
 

@@ -32,15 +32,18 @@ type ElasticsearchComponentTemplateSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	ElasticsearchRefSpec `json:"elasticsearchRef,omitempty"`
+	ElasticsearchRefSpec `json:"elasticsearchRef"`
 
 	// Settings is the component setting
+	// +optional
 	Settings string `json:"settings,omitempty"`
 
 	// Mappings is the component mapping
+	// +optional
 	Mappings string `json:"mappings,omitempty"`
 
 	// Aliases is the component aliases
+	// +optional
 	Aliases string `json:"aliases,omitempty"`
 }
 

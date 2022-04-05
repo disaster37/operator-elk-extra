@@ -17,6 +17,9 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"encoding/json"
+
+	olivere "github.com/olivere/elastic/v7"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -24,18 +27,67 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // ElasticsearchIndexTemplateSpec defines the desired state of ElasticsearchIndexTemplate
+// +k8s:openapi-gen=true
 type ElasticsearchIndexTemplateSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of ElasticsearchIndexTemplate. Edit elasticsearchindextemplate_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	ElasticsearchRefSpec `json:"elasticsearchRef"`
+
+	// IndexPatterns is the list of index to apply this template
+	IndexPatterns []string `json:"index_patterns,omitempty"`
+
+	//ComposedOf is the list of component templates
+	// +optional
+	ComposedOf []string `json:"composed_of,omitempty"`
+
+	//Priority is the priority to apply this template
+	// +optional
+	Priority int `json:"priority,omitempty"`
+
+	// The version
+	// +optional
+	Version int `json:"version,omitempty"`
+
+	// Template is the template specification
+	// +optional
+	Template *ElasticsearchIndexTemplateData `json:"template,omitempty"`
+
+	// Meta is extended info as JSON string
+	// +optional
+	Meta string `json:"_meta,omitempty"`
+
+	// AllowAutoCreate permit to allow auto create index
+	// +optional
+	AllowAutoCreate bool `json:"allow_auto_create,omitempty"`
+}
+
+// ElasticsearchIndexTemplateData is the template specification
+type ElasticsearchIndexTemplateData struct {
+
+	// Settings is the template setting as JSON string
+	// +optional
+	Settings string `json:"settings,omitempty"`
+
+	// Mappings is the template mapping as JSON string
+	// +optional
+	Mappings string `json:"mappings,omitempty"`
+
+	// Aliases is the template alias as JSON string
+	// +optional
+	Aliases string `json:"aliases,omitempty"`
+}
+
+type IndexDataStreamTimestampField struct {
+	Name string `json:"name,omitempty"`
 }
 
 // ElasticsearchIndexTemplateStatus defines the observed state of ElasticsearchIndexTemplate
 type ElasticsearchIndexTemplateStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+
+	Conditions []metav1.Condition `json:"conditions"`
 }
 
 //+kubebuilder:object:root=true
@@ -61,4 +113,61 @@ type ElasticsearchIndexTemplateList struct {
 
 func init() {
 	SchemeBuilder.Register(&ElasticsearchIndexTemplate{}, &ElasticsearchIndexTemplateList{})
+}
+
+// GetObjectMeta permit to get the current ObjectMeta
+func (h *ElasticsearchIndexTemplate) GetObjectMeta() metav1.ObjectMeta {
+	return h.ObjectMeta
+}
+
+// GetStatus permit to get the current status
+func (h *ElasticsearchIndexTemplate) GetStatus() any {
+	return h.Status
+}
+
+func (h *ElasticsearchIndexTemplate) ToIndexTemplate() (*olivere.IndicesGetIndexTemplate, error) {
+	template := &olivere.IndicesGetIndexTemplate{
+		IndexPatterns:   h.Spec.IndexPatterns,
+		ComposedOf:      h.Spec.ComposedOf,
+		Priority:        h.Spec.Priority,
+		Version:         h.Spec.Version,
+		AllowAutoCreate: h.Spec.AllowAutoCreate,
+	}
+
+	if h.Spec.Template != nil {
+		var settings, mappings, aliases map[string]any
+		if h.Spec.Template.Settings != "" {
+			settings = make(map[string]any)
+			if err := json.Unmarshal([]byte(h.Spec.Template.Settings), &settings); err != nil {
+				return nil, err
+			}
+		}
+		if h.Spec.Template.Mappings != "" {
+			mappings = make(map[string]any)
+			if err := json.Unmarshal([]byte(h.Spec.Template.Mappings), &mappings); err != nil {
+				return nil, err
+			}
+		}
+		if h.Spec.Template.Aliases != "" {
+			aliases = make(map[string]any)
+			if err := json.Unmarshal([]byte(h.Spec.Template.Aliases), &aliases); err != nil {
+				return nil, err
+			}
+		}
+		template.Template = &olivere.IndicesGetIndexTemplateData{
+			Settings: settings,
+			Mappings: mappings,
+			Aliases:  aliases,
+		}
+	}
+
+	if h.Spec.Meta != "" {
+		meta := make(map[string]any)
+		if err := json.Unmarshal([]byte(h.Spec.Meta), &meta); err != nil {
+			return nil, err
+		}
+		template.Meta = meta
+	}
+
+	return template, nil
 }

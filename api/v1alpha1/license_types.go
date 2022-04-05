@@ -35,6 +35,7 @@ type LicenseSpec struct {
 	SecretName string `json:"secretName,omitempty"`
 
 	// Basic permit to enable basic license
+	// +optional
 	Basic bool `json:"basic,omitempty"`
 }
 

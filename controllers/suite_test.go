@@ -112,6 +112,7 @@ func (t *ControllerTestSuite) SetupSuite() {
 	if err = licenseReconciler.SetupWithManager(k8sManager); err != nil {
 		panic(err)
 	}
+
 	secretReconciler := &SecretReconciler{
 		Client: k8sClient,
 		Scheme: scheme.Scheme,
@@ -123,6 +124,7 @@ func (t *ControllerTestSuite) SetupSuite() {
 	if err = secretReconciler.SetupWithManager(k8sManager); err != nil {
 		panic(err)
 	}
+
 	ilmReconciler := &ElasticsearchILMReconciler{
 		Client: k8sClient,
 		Scheme: scheme.Scheme,
@@ -135,6 +137,7 @@ func (t *ControllerTestSuite) SetupSuite() {
 	if err = ilmReconciler.SetupWithManager(k8sManager); err != nil {
 		panic(err)
 	}
+
 	repositoryReconciler := &ElasticsearchSnapshotRepositoryReconciler{
 		Client: k8sClient,
 		Scheme: scheme.Scheme,
@@ -147,6 +150,7 @@ func (t *ControllerTestSuite) SetupSuite() {
 	if err = repositoryReconciler.SetupWithManager(k8sManager); err != nil {
 		panic(err)
 	}
+
 	slmReconciler := &ElasticsearchSLMReconciler{
 		Client: k8sClient,
 		Scheme: scheme.Scheme,
@@ -159,6 +163,7 @@ func (t *ControllerTestSuite) SetupSuite() {
 	if err = slmReconciler.SetupWithManager(k8sManager); err != nil {
 		panic(err)
 	}
+
 	componentTemplateReconciler := &ElasticsearchComponentTemplateReconciler{
 		Client: k8sClient,
 		Scheme: scheme.Scheme,
@@ -169,6 +174,19 @@ func (t *ControllerTestSuite) SetupSuite() {
 	componentTemplateReconciler.SetRecorder(k8sManager.GetEventRecorderFor("component-template-controller"))
 	componentTemplateReconciler.SetReconsiler(mock.NewMockReconciler(componentTemplateReconciler, t.mockElasticsearchHandler))
 	if err = componentTemplateReconciler.SetupWithManager(k8sManager); err != nil {
+		panic(err)
+	}
+
+	indexTemplateReconciler := &ElasticsearchIndexTemplateReconciler{
+		Client: k8sClient,
+		Scheme: scheme.Scheme,
+	}
+	indexTemplateReconciler.SetLogger(logrus.WithFields(logrus.Fields{
+		"type": "indexTemplateController",
+	}))
+	indexTemplateReconciler.SetRecorder(k8sManager.GetEventRecorderFor("index-template-controller"))
+	indexTemplateReconciler.SetReconsiler(mock.NewMockReconciler(indexTemplateReconciler, t.mockElasticsearchHandler))
+	if err = indexTemplateReconciler.SetupWithManager(k8sManager); err != nil {
 		panic(err)
 	}
 
