@@ -217,6 +217,19 @@ func (t *ControllerTestSuite) SetupSuite() {
 		panic(err)
 	}
 
+	userReconciler := &UserReconciler{
+		Client: k8sClient,
+		Scheme: scheme.Scheme,
+	}
+	userReconciler.SetLogger(logrus.WithFields(logrus.Fields{
+		"type": "userController",
+	}))
+	userReconciler.SetRecorder(k8sManager.GetEventRecorderFor("user-controller"))
+	userReconciler.SetReconsiler(mock.NewMockReconciler(userReconciler, t.mockElasticsearchHandler))
+	if err = userReconciler.SetupWithManager(k8sManager); err != nil {
+		panic(err)
+	}
+
 	go func() {
 		err = k8sManager.Start(ctrl.SetupSignalHandler())
 		if err != nil {
