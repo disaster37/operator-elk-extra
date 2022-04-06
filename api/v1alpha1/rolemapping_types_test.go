@@ -28,6 +28,10 @@ func (t *V1alpha1TestSuite) TestElasticsearchRoleMappingCRUD() {
 			Namespace: key.Namespace,
 		},
 		Spec: RoleMappingSpec{
+			Roles: []string{"superuser"},
+			Rules: `{
+				"foo": "bar"
+			}`,
 			Enabled: true,
 		},
 	}

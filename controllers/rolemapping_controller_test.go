@@ -134,7 +134,7 @@ func (t *ControllerTestSuite) TestRoleMappingReconciler() {
 			Enabled: true,
 			Roles:   []string{"superuser"},
 			Rules: `{
-				"foo": "bar",
+				"foo": "bar"
 			}`,
 		},
 	}
