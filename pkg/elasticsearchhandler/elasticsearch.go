@@ -63,6 +63,12 @@ type ElasticsearchHandler interface {
 	IndexTemplateGet(name string) (template *olivere.IndicesGetIndexTemplate, err error)
 	IndexTemplateDiff(actual, expected *olivere.IndicesGetIndexTemplate) (diff string, err error)
 
+	// ILM scope
+	WatchUpdate(name string, watch *olivere.XPackWatch) (err error)
+	WatchDelete(name string) (err error)
+	WatchGet(name string) (watch *olivere.XPackWatch, err error)
+	WatchDiff(actual, expected *olivere.XPackWatch) (diff string, err error)
+
 	SetLogger(log *logrus.Entry)
 }
 
