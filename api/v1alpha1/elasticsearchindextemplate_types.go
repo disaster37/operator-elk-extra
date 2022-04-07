@@ -78,10 +78,6 @@ type ElasticsearchIndexTemplateData struct {
 	Aliases string `json:"aliases,omitempty"`
 }
 
-type IndexDataStreamTimestampField struct {
-	Name string `json:"name,omitempty"`
-}
-
 // ElasticsearchIndexTemplateStatus defines the observed state of ElasticsearchIndexTemplate
 type ElasticsearchIndexTemplateStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
