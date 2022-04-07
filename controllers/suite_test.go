@@ -33,9 +33,10 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	"github.com/disaster37/operator-sdk-extra/pkg/mock"
+
 	elkv1alpha1 "github.com/disaster37/operator-elk-extra/api/v1alpha1"
 	"github.com/disaster37/operator-elk-extra/pkg/mocks"
-	"github.com/disaster37/operator-sdk-extra/pkg/mock"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -101,26 +102,144 @@ func (t *ControllerTestSuite) SetupSuite() {
 
 	// Init controlles
 	licenseReconciler := &LicenseReconciler{
-		Client:   k8sClient,
-		recorder: k8sManager.GetEventRecorderFor("license-controller"),
-		Scheme:   scheme.Scheme,
-		log: logrus.WithFields(logrus.Fields{
-			"type": "licenseController",
-		}),
+		Client: k8sClient,
+		Scheme: scheme.Scheme,
 	}
-	licenseReconciler.reconciler = mock.NewMockReconciler(licenseReconciler, t.mockElasticsearchHandler)
+	licenseReconciler.SetLogger(logrus.WithFields(logrus.Fields{
+		"type": "licenseController",
+	}))
+	licenseReconciler.SetRecorder(k8sManager.GetEventRecorderFor("license-controller"))
+	licenseReconciler.SetReconsiler(mock.NewMockReconciler(licenseReconciler, t.mockElasticsearchHandler))
 	if err = licenseReconciler.SetupWithManager(k8sManager); err != nil {
 		panic(err)
 	}
+
 	secretReconciler := &SecretReconciler{
-		Client:   k8sClient,
-		recorder: k8sManager.GetEventRecorderFor("secret-controller"),
-		Scheme:   scheme.Scheme,
-		log: logrus.WithFields(logrus.Fields{
-			"type": "secretController",
-		}),
+		Client: k8sClient,
+		Scheme: scheme.Scheme,
 	}
+	secretReconciler.SetLogger(logrus.WithFields(logrus.Fields{
+		"type": "secretController",
+	}))
+	secretReconciler.SetRecorder(k8sManager.GetEventRecorderFor("secret-controller"))
 	if err = secretReconciler.SetupWithManager(k8sManager); err != nil {
+		panic(err)
+	}
+
+	ilmReconciler := &ElasticsearchILMReconciler{
+		Client: k8sClient,
+		Scheme: scheme.Scheme,
+	}
+	ilmReconciler.SetLogger(logrus.WithFields(logrus.Fields{
+		"type": "ilmController",
+	}))
+	ilmReconciler.SetRecorder(k8sManager.GetEventRecorderFor("ilm-controller"))
+	ilmReconciler.SetReconsiler(mock.NewMockReconciler(ilmReconciler, t.mockElasticsearchHandler))
+	if err = ilmReconciler.SetupWithManager(k8sManager); err != nil {
+		panic(err)
+	}
+
+	repositoryReconciler := &ElasticsearchSnapshotRepositoryReconciler{
+		Client: k8sClient,
+		Scheme: scheme.Scheme,
+	}
+	repositoryReconciler.SetLogger(logrus.WithFields(logrus.Fields{
+		"type": "repositoryController",
+	}))
+	repositoryReconciler.SetRecorder(k8sManager.GetEventRecorderFor("repository-controller"))
+	repositoryReconciler.SetReconsiler(mock.NewMockReconciler(repositoryReconciler, t.mockElasticsearchHandler))
+	if err = repositoryReconciler.SetupWithManager(k8sManager); err != nil {
+		panic(err)
+	}
+
+	slmReconciler := &ElasticsearchSLMReconciler{
+		Client: k8sClient,
+		Scheme: scheme.Scheme,
+	}
+	slmReconciler.SetLogger(logrus.WithFields(logrus.Fields{
+		"type": "slmController",
+	}))
+	slmReconciler.SetRecorder(k8sManager.GetEventRecorderFor("slm-controller"))
+	slmReconciler.SetReconsiler(mock.NewMockReconciler(slmReconciler, t.mockElasticsearchHandler))
+	if err = slmReconciler.SetupWithManager(k8sManager); err != nil {
+		panic(err)
+	}
+
+	componentTemplateReconciler := &ElasticsearchComponentTemplateReconciler{
+		Client: k8sClient,
+		Scheme: scheme.Scheme,
+	}
+	componentTemplateReconciler.SetLogger(logrus.WithFields(logrus.Fields{
+		"type": "componentTemplateController",
+	}))
+	componentTemplateReconciler.SetRecorder(k8sManager.GetEventRecorderFor("component-template-controller"))
+	componentTemplateReconciler.SetReconsiler(mock.NewMockReconciler(componentTemplateReconciler, t.mockElasticsearchHandler))
+	if err = componentTemplateReconciler.SetupWithManager(k8sManager); err != nil {
+		panic(err)
+	}
+
+	indexTemplateReconciler := &ElasticsearchIndexTemplateReconciler{
+		Client: k8sClient,
+		Scheme: scheme.Scheme,
+	}
+	indexTemplateReconciler.SetLogger(logrus.WithFields(logrus.Fields{
+		"type": "indexTemplateController",
+	}))
+	indexTemplateReconciler.SetRecorder(k8sManager.GetEventRecorderFor("index-template-controller"))
+	indexTemplateReconciler.SetReconsiler(mock.NewMockReconciler(indexTemplateReconciler, t.mockElasticsearchHandler))
+	if err = indexTemplateReconciler.SetupWithManager(k8sManager); err != nil {
+		panic(err)
+	}
+
+	elasticsearchRoleReconciler := &ElasticsearchRoleReconciler{
+		Client: k8sClient,
+		Scheme: scheme.Scheme,
+	}
+	elasticsearchRoleReconciler.SetLogger(logrus.WithFields(logrus.Fields{
+		"type": "elasticsearchRoleController",
+	}))
+	elasticsearchRoleReconciler.SetRecorder(k8sManager.GetEventRecorderFor("es-role-controller"))
+	elasticsearchRoleReconciler.SetReconsiler(mock.NewMockReconciler(elasticsearchRoleReconciler, t.mockElasticsearchHandler))
+	if err = elasticsearchRoleReconciler.SetupWithManager(k8sManager); err != nil {
+		panic(err)
+	}
+
+	roleMappingReconciler := &RoleMappingReconciler{
+		Client: k8sClient,
+		Scheme: scheme.Scheme,
+	}
+	roleMappingReconciler.SetLogger(logrus.WithFields(logrus.Fields{
+		"type": "roleMappingController",
+	}))
+	roleMappingReconciler.SetRecorder(k8sManager.GetEventRecorderFor("role-mapping-controller"))
+	roleMappingReconciler.SetReconsiler(mock.NewMockReconciler(roleMappingReconciler, t.mockElasticsearchHandler))
+	if err = roleMappingReconciler.SetupWithManager(k8sManager); err != nil {
+		panic(err)
+	}
+
+	userReconciler := &UserReconciler{
+		Client: k8sClient,
+		Scheme: scheme.Scheme,
+	}
+	userReconciler.SetLogger(logrus.WithFields(logrus.Fields{
+		"type": "userController",
+	}))
+	userReconciler.SetRecorder(k8sManager.GetEventRecorderFor("user-controller"))
+	userReconciler.SetReconsiler(mock.NewMockReconciler(userReconciler, t.mockElasticsearchHandler))
+	if err = userReconciler.SetupWithManager(k8sManager); err != nil {
+		panic(err)
+	}
+
+	watchReconciler := &ElasticsearchWatcherReconciler{
+		Client: k8sClient,
+		Scheme: scheme.Scheme,
+	}
+	watchReconciler.SetLogger(logrus.WithFields(logrus.Fields{
+		"type": "watchController",
+	}))
+	watchReconciler.SetRecorder(k8sManager.GetEventRecorderFor("watch-controller"))
+	watchReconciler.SetReconsiler(mock.NewMockReconciler(watchReconciler, t.mockElasticsearchHandler))
+	if err = watchReconciler.SetupWithManager(k8sManager); err != nil {
 		panic(err)
 	}
 

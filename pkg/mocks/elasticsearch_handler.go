@@ -109,7 +109,7 @@ func (mr *MockElasticsearchHandlerMockRecorder) ILMDelete(arg0 interface{}) *gom
 }
 
 // ILMDiff mocks base method.
-func (m *MockElasticsearchHandler) ILMDiff(arg0, arg1 map[string]interface{}) (string, error) {
+func (m *MockElasticsearchHandler) ILMDiff(arg0, arg1 *elastic.XPackIlmGetLifecycleResponse) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ILMDiff", arg0, arg1)
 	ret0, _ := ret[0].(string)
@@ -124,10 +124,10 @@ func (mr *MockElasticsearchHandlerMockRecorder) ILMDiff(arg0, arg1 interface{}) 
 }
 
 // ILMGet mocks base method.
-func (m *MockElasticsearchHandler) ILMGet(arg0 string) (map[string]interface{}, error) {
+func (m *MockElasticsearchHandler) ILMGet(arg0 string) (*elastic.XPackIlmGetLifecycleResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ILMGet", arg0)
-	ret0, _ := ret[0].(map[string]interface{})
+	ret0, _ := ret[0].(*elastic.XPackIlmGetLifecycleResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -139,7 +139,7 @@ func (mr *MockElasticsearchHandlerMockRecorder) ILMGet(arg0 interface{}) *gomock
 }
 
 // ILMUpdate mocks base method.
-func (m *MockElasticsearchHandler) ILMUpdate(arg0 string, arg1 map[string]interface{}) error {
+func (m *MockElasticsearchHandler) ILMUpdate(arg0 string, arg1 *elastic.XPackIlmGetLifecycleResponse) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ILMUpdate", arg0, arg1)
 	ret0, _ := ret[0].(error)
@@ -595,4 +595,62 @@ func (m *MockElasticsearchHandler) UserUpdate(arg0 string, arg1 *elastic.XPackSe
 func (mr *MockElasticsearchHandlerMockRecorder) UserUpdate(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UserUpdate", reflect.TypeOf((*MockElasticsearchHandler)(nil).UserUpdate), arg0, arg1)
+}
+
+// WatchDelete mocks base method.
+func (m *MockElasticsearchHandler) WatchDelete(arg0 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WatchDelete", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WatchDelete indicates an expected call of WatchDelete.
+func (mr *MockElasticsearchHandlerMockRecorder) WatchDelete(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WatchDelete", reflect.TypeOf((*MockElasticsearchHandler)(nil).WatchDelete), arg0)
+}
+
+// WatchDiff mocks base method.
+func (m *MockElasticsearchHandler) WatchDiff(arg0, arg1 *elastic.XPackWatch) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WatchDiff", arg0, arg1)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// WatchDiff indicates an expected call of WatchDiff.
+func (mr *MockElasticsearchHandlerMockRecorder) WatchDiff(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WatchDiff", reflect.TypeOf((*MockElasticsearchHandler)(nil).WatchDiff), arg0, arg1)
+}
+
+// WatchGet mocks base method.
+func (m *MockElasticsearchHandler) WatchGet(arg0 string) (*elastic.XPackWatch, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WatchGet", arg0)
+	ret0, _ := ret[0].(*elastic.XPackWatch)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// WatchGet indicates an expected call of WatchGet.
+func (mr *MockElasticsearchHandlerMockRecorder) WatchGet(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WatchGet", reflect.TypeOf((*MockElasticsearchHandler)(nil).WatchGet), arg0)
+}
+
+// WatchUpdate mocks base method.
+func (m *MockElasticsearchHandler) WatchUpdate(arg0 string, arg1 *elastic.XPackWatch) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WatchUpdate", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WatchUpdate indicates an expected call of WatchUpdate.
+func (mr *MockElasticsearchHandlerMockRecorder) WatchUpdate(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WatchUpdate", reflect.TypeOf((*MockElasticsearchHandler)(nil).WatchUpdate), arg0, arg1)
 }

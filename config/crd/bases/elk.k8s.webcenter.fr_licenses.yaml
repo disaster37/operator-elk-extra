@@ -60,6 +60,8 @@ spec:
               secretName:
                 description: SecretName is the secret that contain the license
                 type: string
+            required:
+            - elasticsearchRef
             type: object
           status:
             description: LicenseStatus defines the observed state of License

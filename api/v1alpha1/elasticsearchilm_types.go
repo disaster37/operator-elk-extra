@@ -24,18 +24,23 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // ElasticsearchILMSpec defines the desired state of ElasticsearchILM
+// +k8s:openapi-gen=true
 type ElasticsearchILMSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of ElasticsearchILM. Edit elasticsearchilm_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	ElasticsearchRefSpec `json:"elasticsearchRef"`
+
+	// Policy is the raw policy on JSON
+	Policy string `json:"policy"`
 }
 
 // ElasticsearchILMStatus defines the observed state of ElasticsearchILM
 type ElasticsearchILMStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+
+	Conditions []metav1.Condition `json:"conditions"`
 }
 
 //+kubebuilder:object:root=true
@@ -61,4 +66,14 @@ type ElasticsearchILMList struct {
 
 func init() {
 	SchemeBuilder.Register(&ElasticsearchILM{}, &ElasticsearchILMList{})
+}
+
+// GetObjectMeta permit to get the current ObjectMeta
+func (h *ElasticsearchILM) GetObjectMeta() metav1.ObjectMeta {
+	return h.ObjectMeta
+}
+
+// GetStatus permit to get the current status
+func (h *ElasticsearchILM) GetStatus() any {
+	return h.Status
 }

@@ -49,3 +49,42 @@ func (t *V1alpha1TestSuite) TestLicenseCRUD() {
 	err = t.k8sClient.Get(context.Background(), key, created)
 	assert.Error(t.T(), err)
 }
+
+func (t *V1alpha1TestSuite) TestLicenseGetObjectMeta() {
+	meta := metav1.ObjectMeta{
+		Name:      "test",
+		Namespace: "test",
+	}
+	test := &License{
+		ObjectMeta: meta,
+		Spec: LicenseSpec{
+			SecretName: "test",
+			ElasticsearchRefSpec: ElasticsearchRefSpec{
+				Name: "test",
+			},
+		},
+	}
+
+	assert.Equal(t.T(), meta, test.GetObjectMeta())
+}
+
+func (t *V1alpha1TestSuite) TestLicenseGetStatus() {
+	status := LicenseStatus{
+		Conditions: []metav1.Condition{
+			{
+				Type: "test",
+			},
+		},
+	}
+	test := &License{
+		Spec: LicenseSpec{
+			SecretName: "test",
+			ElasticsearchRefSpec: ElasticsearchRefSpec{
+				Name: "test",
+			},
+		},
+		Status: status,
+	}
+
+	assert.Equal(t.T(), status, test.GetStatus())
+}

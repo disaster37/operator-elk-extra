@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/jarcoal/httpmock"
 	olivere "github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/assert"
@@ -17,21 +18,23 @@ func (t *ElasticsearchHandlerTestSuite) TestILMGet() {
 
 	rawPolicy := `
 {
-	"policy": {
-		"phases": {
-			"warm": {
-				"min_age": "10d",
-				"actions": {
-					"forcemerge": {
-						"max_num_segments": 1
+	"test" : {
+		"policy": {
+			"phases": {
+				"warm": {
+					"min_age": "10d",
+					"actions": {
+						"forcemerge": {
+							"max_num_segments": 1
+						}
 					}
-				}
-			},
-			"delete": {
-				"min_age": "31d",
-				"actions": {
-					"delete": {
-						"delete_searchable_snapshot": true
+				},
+				"delete": {
+					"min_age": "31d",
+					"actions": {
+						"delete": {
+							"delete_searchable_snapshot": true
+						}
 					}
 				}
 			}
@@ -40,21 +43,13 @@ func (t *ElasticsearchHandlerTestSuite) TestILMGet() {
 }
 	`
 
-	policyTest := map[string]interface{}{}
+	policyTest := map[string]*olivere.XPackIlmGetLifecycleResponse{}
 	if err := json.Unmarshal([]byte(rawPolicy), &policyTest); err != nil {
 		panic(err)
 	}
 
-	// Normale use case
-	result := &olivere.XPackIlmGetLifecycleResponse{
-		Policy: policyTest,
-	}
-
 	httpmock.RegisterResponder("GET", urlILM, func(req *http.Request) (*http.Response, error) {
-		resp, err := httpmock.NewJsonResponse(200, result)
-		if err != nil {
-			panic(err)
-		}
+		resp := httpmock.NewStringResponse(200, rawPolicy)
 		SetHeaders(resp)
 		return resp, nil
 	})
@@ -63,7 +58,7 @@ func (t *ElasticsearchHandlerTestSuite) TestILMGet() {
 	if err != nil {
 		t.Fail(err.Error())
 	}
-	assert.Equal(t.T(), policyTest, policy)
+	assert.Empty(t.T(), cmp.Diff(policyTest["test"], policy))
 
 	// When error
 	httpmock.RegisterResponder("GET", urlILM, httpmock.NewErrorResponder(errors.New("fack error")))
@@ -117,8 +112,8 @@ func (t *ElasticsearchHandlerTestSuite) TestILMUpdate() {
 }
 	`
 
-	policy := map[string]interface{}{}
-	if err := json.Unmarshal([]byte(rawPolicy), &policy); err != nil {
+	policy := &olivere.XPackIlmGetLifecycleResponse{}
+	if err := json.Unmarshal([]byte(rawPolicy), policy); err != nil {
 		panic(err)
 	}
 
@@ -140,7 +135,7 @@ func (t *ElasticsearchHandlerTestSuite) TestILMUpdate() {
 }
 
 func (t *ElasticsearchHandlerTestSuite) TestILMDiff() {
-	var actual, expected map[string]interface{}
+	var actual, expected *olivere.XPackIlmGetLifecycleResponse
 
 	rawPolicy := `
 {
@@ -167,8 +162,8 @@ func (t *ElasticsearchHandlerTestSuite) TestILMDiff() {
 }
 	`
 
-	expected = map[string]interface{}{}
-	if err := json.Unmarshal([]byte(rawPolicy), &expected); err != nil {
+	expected = &olivere.XPackIlmGetLifecycleResponse{}
+	if err := json.Unmarshal([]byte(rawPolicy), expected); err != nil {
 		panic(err)
 	}
 
@@ -181,7 +176,7 @@ func (t *ElasticsearchHandlerTestSuite) TestILMDiff() {
 	assert.NotEmpty(t.T(), diff)
 
 	// When policy is the same
-	actual = map[string]interface{}{}
+	actual = &olivere.XPackIlmGetLifecycleResponse{}
 	if err := json.Unmarshal([]byte(rawPolicy), &actual); err != nil {
 		panic(err)
 	}
@@ -216,8 +211,8 @@ func (t *ElasticsearchHandlerTestSuite) TestILMDiff() {
 	}
 }
 	`
-	expected = map[string]interface{}{}
-	if err := json.Unmarshal([]byte(rawPolicy), &expected); err != nil {
+	expected = &olivere.XPackIlmGetLifecycleResponse{}
+	if err := json.Unmarshal([]byte(rawPolicy), expected); err != nil {
 		panic(err)
 	}
 	diff, err = t.esHandler.ILMDiff(actual, expected)

@@ -22,12 +22,9 @@ import (
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
+	"k8s.io/client-go/dynamic"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
-	elkv1alpha1 "github.com/disaster37/operator-elk-extra/api/v1alpha1"
-	"github.com/disaster37/operator-elk-extra/controllers"
-	"github.com/disaster37/operator-elk-extra/pkg/helpers"
-	es "github.com/elastic/cloud-on-k8s/pkg/apis/elasticsearch/v1"
 	"github.com/sirupsen/logrus"
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -37,6 +34,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	elkv1alpha1 "github.com/disaster37/operator-elk-extra/api/v1alpha1"
+	"github.com/disaster37/operator-elk-extra/controllers"
+	"github.com/disaster37/operator-elk-extra/pkg/helpers"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -54,7 +55,6 @@ func init() {
 	//+kubebuilder:scaffold:scheme
 
 	utilruntime.Must(core.AddToScheme(scheme))
-	utilruntime.Must(es.AddToScheme(scheme))
 
 }
 
@@ -105,7 +105,7 @@ func main() {
 	}
 	cfg.Timeout = timeout
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme:                 scheme,
 		MetricsBindAddress:     metricsAddr,
 		Port:                   9443,
@@ -120,6 +120,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	dinamicClient, err := dynamic.NewForConfig(cfg)
+	if err != nil {
+		setupLog.Error(err, "unable to init dinamic client")
+		os.Exit(1)
+	}
+
+	// License controller
 	licenseController := &controllers.LicenseReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
@@ -128,10 +135,15 @@ func main() {
 		"type": "LicenseController",
 	}))
 	licenseController.SetRecorder(mgr.GetEventRecorderFor("license-controller"))
+	licenseController.SetReconsiler(licenseController)
+	licenseController.SetDinamicClient(dinamicClient)
+
 	if err = licenseController.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "License")
 		os.Exit(1)
 	}
+
+	// Secret controller
 	secretController := &controllers.SecretReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
@@ -140,53 +152,158 @@ func main() {
 		"type": "SecretController",
 	}))
 	secretController.SetRecorder(mgr.GetEventRecorderFor("secret-controller"))
+
 	if err = secretController.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Secret")
 		os.Exit(1)
 	}
 
-	if err = (&controllers.ElasticsearchILMReconciler{
+	// ILM controller
+	ilmController := &controllers.ElasticsearchILMReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ElasticsearchILM")
+	}
+	ilmController.SetLogger(log.WithFields(logrus.Fields{
+		"type": "ILMController",
+	}))
+	ilmController.SetRecorder(mgr.GetEventRecorderFor("ilm-controller"))
+	ilmController.SetReconsiler(ilmController)
+	ilmController.SetDinamicClient(dinamicClient)
+
+	if err = ilmController.SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ILM")
 		os.Exit(1)
 	}
-	if err = (&controllers.ElasticsearchSLMReconciler{
+
+	// SLM controller
+	slmController := &controllers.ElasticsearchSLMReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ElasticsearchSLM")
+	}
+	slmController.SetLogger(log.WithFields(logrus.Fields{
+		"type": "SLMController",
+	}))
+	slmController.SetRecorder(mgr.GetEventRecorderFor("slm-controller"))
+	slmController.SetReconsiler(slmController)
+	slmController.SetDinamicClient(dinamicClient)
+
+	if err = slmController.SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "SLM")
 		os.Exit(1)
 	}
-	if err = (&controllers.ElasticsearchIndexTemplateReconciler{
+
+	// Snapshot repository controller
+	repositoryController := &controllers.ElasticsearchSnapshotRepositoryReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ElasticsearchIndexTemplate")
+	}
+	repositoryController.SetLogger(log.WithFields(logrus.Fields{
+		"type": "RepositoryController",
+	}))
+	repositoryController.SetRecorder(mgr.GetEventRecorderFor("repository-controller"))
+	repositoryController.SetReconsiler(repositoryController)
+	repositoryController.SetDinamicClient(dinamicClient)
+	if err = repositoryController.SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Repository")
 		os.Exit(1)
 	}
-	if err = (&controllers.ElasticsearchComponentTemplateReconciler{
+
+	// Component template controller
+	componentTemplateController := &controllers.ElasticsearchComponentTemplateReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ElasticsearchComponentTemplate")
+	}
+	componentTemplateController.SetLogger(log.WithFields(logrus.Fields{
+		"type": "ComponentTemplateController",
+	}))
+	componentTemplateController.SetRecorder(mgr.GetEventRecorderFor("component-template-controller"))
+	componentTemplateController.SetReconsiler(componentTemplateController)
+	componentTemplateController.SetDinamicClient(dinamicClient)
+	if err = componentTemplateController.SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ComponentTemplate")
 		os.Exit(1)
 	}
-	if err = (&controllers.ElasticsearchSnapshotRepositoryReconciler{
+
+	// Index template controller
+	indexTemplateController := &controllers.ElasticsearchIndexTemplateReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ElasticsearchSnapshotRepository")
+	}
+	indexTemplateController.SetLogger(log.WithFields(logrus.Fields{
+		"type": "IndexTemplateController",
+	}))
+	indexTemplateController.SetRecorder(mgr.GetEventRecorderFor("index-template-controller"))
+	indexTemplateController.SetReconsiler(indexTemplateController)
+	indexTemplateController.SetDinamicClient(dinamicClient)
+	if err = indexTemplateController.SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "IndexTemplate")
 		os.Exit(1)
 	}
-	if err = (&controllers.ElasticsearchWatcherReconciler{
+
+	// Elasticsearch role controller
+	elasticsearchRoleController := &controllers.ElasticsearchRoleReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ElasticsearchWatcher")
+	}
+	elasticsearchRoleController.SetLogger(log.WithFields(logrus.Fields{
+		"type": "ElasticsearchRoleController",
+	}))
+	elasticsearchRoleController.SetRecorder(mgr.GetEventRecorderFor("es-role-controller"))
+	elasticsearchRoleController.SetReconsiler(elasticsearchRoleController)
+	elasticsearchRoleController.SetDinamicClient(dinamicClient)
+	if err = elasticsearchRoleController.SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ElasticsearchRole")
 		os.Exit(1)
 	}
+
+	// Role mapping controller
+	roleMappingController := &controllers.RoleMappingReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}
+	roleMappingController.SetLogger(log.WithFields(logrus.Fields{
+		"type": "RoleMappingController",
+	}))
+	roleMappingController.SetRecorder(mgr.GetEventRecorderFor("role-mapping-controller"))
+	roleMappingController.SetReconsiler(roleMappingController)
+	roleMappingController.SetDinamicClient(dinamicClient)
+	if err = roleMappingController.SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "RoleMapping")
+		os.Exit(1)
+	}
+
+	// User controller
+	userController := &controllers.UserReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}
+	userController.SetLogger(log.WithFields(logrus.Fields{
+		"type": "UserController",
+	}))
+	userController.SetRecorder(mgr.GetEventRecorderFor("user-controller"))
+	userController.SetReconsiler(userController)
+	userController.SetDinamicClient(dinamicClient)
+	if err = userController.SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "User")
+		os.Exit(1)
+	}
+
+	// Watch controller
+	watchController := &controllers.ElasticsearchWatcherReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}
+	watchController.SetLogger(log.WithFields(logrus.Fields{
+		"type": "WatchController",
+	}))
+	watchController.SetRecorder(mgr.GetEventRecorderFor("watch-controller"))
+	watchController.SetReconsiler(watchController)
+	watchController.SetDinamicClient(dinamicClient)
+	if err = watchController.SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Watch")
+		os.Exit(1)
+	}
+
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

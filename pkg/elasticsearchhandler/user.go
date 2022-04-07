@@ -148,5 +148,5 @@ func (h *ElasticsearchHandlerImpl) UserGet(name string) (user *olivere.XPackSecu
 
 // UserDiff permit to check if 2 users are the same
 func (h *ElasticsearchHandlerImpl) UserDiff(actual, expected *olivere.XPackSecurityPutUserRequest) (diff string, err error) {
-	return standartDiff(actual, expected, h.log)
+	return standartDiff(actual, expected, h.log, nil)
 }

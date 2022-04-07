@@ -17,6 +17,9 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"encoding/json"
+
+	olivere "github.com/olivere/elastic/v7"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -24,18 +27,32 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // ElasticsearchComponentTemplateSpec defines the desired state of ElasticsearchComponentTemplate
+// +k8s:openapi-gen=true
 type ElasticsearchComponentTemplateSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of ElasticsearchComponentTemplate. Edit elasticsearchcomponenttemplate_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	ElasticsearchRefSpec `json:"elasticsearchRef"`
+
+	// Settings is the component setting
+	// +optional
+	Settings string `json:"settings,omitempty"`
+
+	// Mappings is the component mapping
+	// +optional
+	Mappings string `json:"mappings,omitempty"`
+
+	// Aliases is the component aliases
+	// +optional
+	Aliases string `json:"aliases,omitempty"`
 }
 
 // ElasticsearchComponentTemplateStatus defines the observed state of ElasticsearchComponentTemplate
 type ElasticsearchComponentTemplateStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+
+	Conditions []metav1.Condition `json:"conditions"`
 }
 
 //+kubebuilder:object:root=true
@@ -61,4 +78,43 @@ type ElasticsearchComponentTemplateList struct {
 
 func init() {
 	SchemeBuilder.Register(&ElasticsearchComponentTemplate{}, &ElasticsearchComponentTemplateList{})
+}
+
+// GetObjectMeta permit to get the current ObjectMeta
+func (h *ElasticsearchComponentTemplate) GetObjectMeta() metav1.ObjectMeta {
+	return h.ObjectMeta
+}
+
+// GetStatus permit to get the current status
+func (h *ElasticsearchComponentTemplate) GetStatus() any {
+	return h.Status
+}
+
+// ToComponentTemplate permit to convert current spec to component template spec
+func (h *ElasticsearchComponentTemplate) ToComponentTemplate() (*olivere.IndicesGetComponentTemplateData, error) {
+	component := &olivere.IndicesGetComponentTemplateData{
+		Settings: make(map[string]any),
+		Mappings: make(map[string]any),
+		Aliases:  make(map[string]any),
+	}
+
+	if h.Spec.Mappings != "" {
+		if err := json.Unmarshal([]byte(h.Spec.Mappings), &component.Mappings); err != nil {
+			return nil, err
+		}
+	}
+
+	if h.Spec.Settings != "" {
+		if err := json.Unmarshal([]byte(h.Spec.Settings), &component.Settings); err != nil {
+			return nil, err
+		}
+	}
+
+	if h.Spec.Aliases != "" {
+		if err := json.Unmarshal([]byte(h.Spec.Aliases), &component.Aliases); err != nil {
+			return nil, err
+		}
+	}
+
+	return component, nil
 }

@@ -15,10 +15,10 @@ type ElasticsearchHandler interface {
 	LicenseEnableBasic() (err error)
 
 	// ILM scope
-	ILMUpdate(name string, policy map[string]any) (err error)
+	ILMUpdate(name string, policy *olivere.XPackIlmGetLifecycleResponse) (err error)
 	ILMDelete(name string) (err error)
-	ILMGet(name string) (policy map[string]any, err error)
-	ILMDiff(actual, expected map[string]any) (diff string, err error)
+	ILMGet(name string) (policy *olivere.XPackIlmGetLifecycleResponse, err error)
+	ILMDiff(actual, expected *olivere.XPackIlmGetLifecycleResponse) (diff string, err error)
 
 	// SLM scope
 	SLMUpdate(name string, policy *SnapshotLifecyclePolicySpec) (err error)
@@ -62,6 +62,12 @@ type ElasticsearchHandler interface {
 	IndexTemplateDelete(name string) (err error)
 	IndexTemplateGet(name string) (template *olivere.IndicesGetIndexTemplate, err error)
 	IndexTemplateDiff(actual, expected *olivere.IndicesGetIndexTemplate) (diff string, err error)
+
+	// ILM scope
+	WatchUpdate(name string, watch *olivere.XPackWatch) (err error)
+	WatchDelete(name string) (err error)
+	WatchGet(name string) (watch *olivere.XPackWatch, err error)
+	WatchDiff(actual, expected *olivere.XPackWatch) (diff string, err error)
 
 	SetLogger(log *logrus.Entry)
 }

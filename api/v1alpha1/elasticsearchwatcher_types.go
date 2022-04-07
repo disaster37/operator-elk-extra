@@ -17,6 +17,9 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"encoding/json"
+
+	olivere "github.com/olivere/elastic/v7"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -24,18 +27,46 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // ElasticsearchWatcherSpec defines the desired state of ElasticsearchWatcher
+// +k8s:openapi-gen=true
 type ElasticsearchWatcherSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of ElasticsearchWatcher. Edit elasticsearchwatcher_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	ElasticsearchRefSpec `json:"elasticsearchRef"`
+
+	// JSON string
+	Trigger string `json:"trigger"`
+
+	// JSON string
+	Input string `json:"input"`
+
+	// JSON string
+	Condition string `json:"condition"`
+
+	// JSON string
+	// +optional
+	Transform string `json:"transform,omitempty"`
+
+	// +optional
+	ThrottlePeriod string `json:"throttle_period,omitempty"`
+
+	// +optional
+	ThrottlePeriodInMillis int64 `json:"throttle_period_in_millis,omitempty"`
+
+	// JSON string
+	Actions string `json:"actions"`
+
+	// JSON string
+	// +optional
+	Metadata string `json:"metadata,omitempty"`
 }
 
 // ElasticsearchWatcherStatus defines the observed state of ElasticsearchWatcher
 type ElasticsearchWatcherStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+
+	Conditions []metav1.Condition `json:"conditions"`
 }
 
 //+kubebuilder:object:root=true
@@ -61,4 +92,65 @@ type ElasticsearchWatcherList struct {
 
 func init() {
 	SchemeBuilder.Register(&ElasticsearchWatcher{}, &ElasticsearchWatcherList{})
+}
+
+// GetObjectMeta permit to get the current ObjectMeta
+func (h *ElasticsearchWatcher) GetObjectMeta() metav1.ObjectMeta {
+	return h.ObjectMeta
+}
+
+// GetStatus permit to get the current status
+func (h *ElasticsearchWatcher) GetStatus() any {
+	return h.Status
+}
+
+func (h *ElasticsearchWatcher) ToWatch() (*olivere.XPackWatch, error) {
+	watch := &olivere.XPackWatch{
+		ThrottlePeriod:         h.Spec.ThrottlePeriod,
+		ThrottlePeriodInMillis: h.Spec.ThrottlePeriodInMillis,
+	}
+
+	if h.Spec.Trigger != "" {
+		trigger := make(map[string]map[string]any)
+		if err := json.Unmarshal([]byte(h.Spec.Trigger), &trigger); err != nil {
+			watch.Trigger = trigger
+		}
+	}
+
+	if h.Spec.Input != "" {
+		input := make(map[string]map[string]any)
+		if err := json.Unmarshal([]byte(h.Spec.Input), &input); err != nil {
+			watch.Input = input
+		}
+	}
+
+	if h.Spec.Condition != "" {
+		condition := make(map[string]map[string]any)
+		if err := json.Unmarshal([]byte(h.Spec.Condition), &condition); err != nil {
+			watch.Condition = condition
+		}
+	}
+
+	if h.Spec.Transform != "" {
+		transform := make(map[string]any)
+		if err := json.Unmarshal([]byte(h.Spec.Transform), &transform); err != nil {
+			watch.Transform = transform
+		}
+	}
+
+	if h.Spec.Actions != "" {
+		actions := make(map[string]map[string]any)
+		if err := json.Unmarshal([]byte(h.Spec.Actions), &actions); err != nil {
+			watch.Actions = actions
+		}
+	}
+
+	if h.Spec.Metadata != "" {
+		meta := make(map[string]any)
+		if err := json.Unmarshal([]byte(h.Spec.Metadata), &meta); err != nil {
+			watch.Metadata = meta
+		}
+	}
+
+	return watch, nil
 }

@@ -102,5 +102,5 @@ func (h *ElasticsearchHandlerImpl) IndexTemplateGet(name string) (template *oliv
 
 // IndexTemplateDiff permit to check if 2 index template is the same
 func (h *ElasticsearchHandlerImpl) IndexTemplateDiff(actual, expected *olivere.IndicesGetIndexTemplate) (diff string, err error) {
-	return standartDiff(actual, expected, h.log)
+	return standartDiff(actual, expected, h.log, nil)
 }

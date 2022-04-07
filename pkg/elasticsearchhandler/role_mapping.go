@@ -105,5 +105,5 @@ func (h *ElasticsearchHandlerImpl) RoleMappingGet(name string) (roleMapping *oli
 
 // RoleMappingDiff permit to check if 2 role mapping are the same
 func (h *ElasticsearchHandlerImpl) RoleMappingDiff(actual, expected *olivere.XPackSecurityRoleMapping) (diff string, err error) {
-	return standartDiff(actual, expected, h.log)
+	return standartDiff(actual, expected, h.log, nil)
 }

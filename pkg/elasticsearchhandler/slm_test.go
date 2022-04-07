@@ -1,7 +1,6 @@
 package elasticsearchhandler
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -14,34 +13,25 @@ var urlSLM = fmt.Sprintf("%s/_slm/policy/test", baseURL)
 
 func (t *ElasticsearchHandlerTestSuite) TestSLMGet() {
 
-	rawPolicy := `
-{
-	"policy": {
-		"name": "<daily-snap-{now/d}>",
-		"schedule": "0 30 1 * * ?",
-		"repository": "repo",
-		"config": {
-			"indices": ["test-*"],
-			"ignore_unavailable": false,
-			"include_global_state": false
-		},
-		"retention": {
-			"expire_after": "7d",
-			"min_count": 5,
-			"max_count": 10
-		} 
-	}
-}
-	`
-
-	policyTest := &SnapshotLifecyclePolicyGet{}
-	if err := json.Unmarshal([]byte(rawPolicy), policyTest); err != nil {
-		panic(err)
-	}
-
 	// Normale use case
-	result := map[string]any{
-		"test": policyTest,
+	result := map[string]*SnapshotLifecyclePolicyGet{
+		"test": &SnapshotLifecyclePolicyGet{
+			Policy: &SnapshotLifecyclePolicySpec{
+				Name:       "<daily-snap-{now/d}>",
+				Repository: "repo",
+				Schedule:   "0 30 1 * * ?",
+				Config: ElasticsearchSLMConfig{
+					Indices:            []string{"test-*"},
+					IgnoreUnavailable:  false,
+					IncludeGlobalState: false,
+				},
+				Retention: &ElasticsearchSLMRetention{
+					ExpireAfter: "7d",
+					MinCount:    5,
+					MaxCount:    10,
+				},
+			},
+		},
 	}
 
 	httpmock.RegisterResponder("GET", urlSLM, func(req *http.Request) (*http.Response, error) {
@@ -57,7 +47,7 @@ func (t *ElasticsearchHandlerTestSuite) TestSLMGet() {
 	if err != nil {
 		t.Fail(err.Error())
 	}
-	assert.Equal(t.T(), policyTest.Policy, policy)
+	assert.Equal(t.T(), result["test"].Policy, policy)
 
 	// When error
 	httpmock.RegisterResponder("GET", urlSLM, httpmock.NewErrorResponder(errors.New("fack error")))
@@ -87,19 +77,19 @@ func (t *ElasticsearchHandlerTestSuite) TestSLMDelete() {
 func (t *ElasticsearchHandlerTestSuite) TestSLMUpdate() {
 
 	policy := &SnapshotLifecyclePolicySpec{
-		Schedule:   "0 30 1 * * ?",
 		Name:       "<daily-snap-{now/d}>",
 		Repository: "repo",
-		Configs: `{
-			"indices": ["test-*"],
-			"ignore_unavailable": false,
-			"include_global_state": false
-		}`,
-		Retention: `{
-			"expire_after": "7d",
-			"min_count": 5,
-			"max_count": 10
-		}`,
+		Schedule:   "0 30 1 * * ?",
+		Config: ElasticsearchSLMConfig{
+			Indices:            []string{"test-*"},
+			IgnoreUnavailable:  false,
+			IncludeGlobalState: false,
+		},
+		Retention: &ElasticsearchSLMRetention{
+			ExpireAfter: "7d",
+			MinCount:    5,
+			MaxCount:    10,
+		},
 	}
 
 	httpmock.RegisterResponder("PUT", urlSLM, func(req *http.Request) (*http.Response, error) {
@@ -123,19 +113,19 @@ func (t *ElasticsearchHandlerTestSuite) TestSLMDiff() {
 	var actual, expected *SnapshotLifecyclePolicySpec
 
 	expected = &SnapshotLifecyclePolicySpec{
-		Schedule:   "0 30 1 * * ?",
 		Name:       "<daily-snap-{now/d}>",
 		Repository: "repo",
-		Configs: `{
-			"indices": ["test-*"],
-			"ignore_unavailable": false,
-			"include_global_state": false
-		}`,
-		Retention: `{
-			"expire_after": "7d",
-			"min_count": 5,
-			"max_count": 10
-		}`,
+		Schedule:   "0 30 1 * * ?",
+		Config: ElasticsearchSLMConfig{
+			Indices:            []string{"test-*"},
+			IgnoreUnavailable:  false,
+			IncludeGlobalState: false,
+		},
+		Retention: &ElasticsearchSLMRetention{
+			ExpireAfter: "7d",
+			MinCount:    5,
+			MaxCount:    10,
+		},
 	}
 
 	// When SLM not exist yet
@@ -148,19 +138,19 @@ func (t *ElasticsearchHandlerTestSuite) TestSLMDiff() {
 
 	// When policy is the same
 	actual = &SnapshotLifecyclePolicySpec{
-		Schedule:   "0 30 1 * * ?",
 		Name:       "<daily-snap-{now/d}>",
 		Repository: "repo",
-		Configs: `{
-			"indices": ["test-*"],
-			"ignore_unavailable": false,
-			"include_global_state": false
-		}`,
-		Retention: `{
-			"expire_after": "7d",
-			"min_count": 5,
-			"max_count": 10
-		}`,
+		Schedule:   "0 30 1 * * ?",
+		Config: ElasticsearchSLMConfig{
+			Indices:            []string{"test-*"},
+			IgnoreUnavailable:  false,
+			IncludeGlobalState: false,
+		},
+		Retention: &ElasticsearchSLMRetention{
+			ExpireAfter: "7d",
+			MinCount:    5,
+			MaxCount:    10,
+		},
 	}
 	diff, err = t.esHandler.SLMDiff(actual, expected)
 	if err != nil {
