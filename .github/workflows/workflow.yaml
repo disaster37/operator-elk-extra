@@ -60,7 +60,7 @@ jobs:
           cp config/rbac/*_viewer_role.yaml deploy/helm/operator-elk-extra-cluster-wide/custom-charts/operator-elk-extra-roles/templates/
           cp config/rbac/role.yaml deploy/helm/operator-elk-extra-cluster-wide/custom-charts/operator-elk-extra-roles/templates/
           cp config/rbac/role_binding.yaml deploy/helm/operator-elk-extra-cluster-wide/custom-charts/operator-elk-extra-roles/templates/
-          sed -i /namespace: system/namespace: {{ .Release.Namespace }}/ deploy/helm/operator-elk-extra-cluster-wide/custom-charts/operator-elk-extra-roles/templates/role_binding.yaml
+          sed -i -e 's/namespace: system/namespace: {{ .Release.Namespace }}/g' deploy/helm/operator-elk-extra-cluster-wide/custom-charts/operator-elk-extra-roles/templates/role_binding.yaml
       - name: Lint chart
         run: |
           cd deploy/helm/operator-elk-extra-cluster-wide
