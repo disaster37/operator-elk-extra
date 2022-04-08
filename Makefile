@@ -1,4 +1,4 @@
-OPERATOR_NAMESPACE ?= "default"
+OPERATOR_NAMESPACE ?= "operator-elk-extra"
 
 # VERSION defines the project version for the bundle.
 # Update this value when you upgrade the version of your project.
@@ -31,14 +31,14 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 #
 # For example, running 'make bundle-build bundle-push catalog-build catalog-push' will build and push both
 # k8s.webcenter.fr/operator-elk-extra-bundle:$VERSION and k8s.webcenter.fr/operator-elk-extra-catalog:$VERSION.
-IMAGE_TAG_BASE ?= k8s.webcenter.fr/operator-elk-extra
+IMAGE_TAG_BASE ?= webcenter/operator-elk-extra
 
 # BUNDLE_IMG defines the image:tag used for the bundle.
 # You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
 
 # Image URL to use all building/pushing image targets
-IMG ?= controller:latest
+IMG ?= $(IMAGE_TAG_BASE):$(VERSION)
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.23
 
@@ -79,7 +79,7 @@ help: ## Display this help.
 
 .PHONY: manifests
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+	$(CONTROLLER_GEN) rbac:roleName=operator-elk-extra crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
@@ -119,6 +119,10 @@ docker-build: test ## Build docker image with the manager.
 .PHONY: docker-push
 docker-push: ## Push docker image with the manager.
 	docker push ${IMG}
+
+.PHONY: docker-buildx
+docker-buildx:
+	docker buildx build -t ${IMG} .  --push
 
 ##@ Deployment
 
@@ -186,6 +190,10 @@ bundle-build: ## Build the bundle image.
 .PHONY: bundle-push
 bundle-push: ## Push the bundle image.
 	$(MAKE) docker-push IMG=$(BUNDLE_IMG)
+
+.PHONY: bundle-buildx
+bundle-buildx:
+	docker buildx build -f bundle.Dockerfile -t $(BUNDLE_IMG) .  --push
 
 .PHONY: opm
 OPM = ./bin/opm

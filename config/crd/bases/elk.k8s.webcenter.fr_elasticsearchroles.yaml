@@ -53,8 +53,6 @@ spec:
                       type: array
                   required:
                   - application
-                  - privileges
-                  - resources
                   type: object
                 type: array
               cluster:
@@ -106,7 +104,6 @@ spec:
                   required:
                   - names
                   - privileges
-                  - query
                   type: object
                 type: array
               metadata:

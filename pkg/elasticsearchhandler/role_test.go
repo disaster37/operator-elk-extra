@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/jarcoal/httpmock"
-	olivere "github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -14,10 +13,10 @@ var urlRole = fmt.Sprintf("%s/_security/role/test", baseURL)
 
 func (t *ElasticsearchHandlerTestSuite) TestRoleGet() {
 
-	result := make(olivere.XPackSecurityGetRoleResponse)
-	role := &olivere.XPackSecurityRole{
+	result := make(map[string]XPackSecurityRole)
+	role := &XPackSecurityRole{
 		Cluster: []string{"all"},
-		Indices: []olivere.XPackSecurityIndicesPermissions{
+		Indices: []XPackSecurityIndicesPermissions{
 			{
 				Names:      []string{"logstash-*"},
 				Privileges: []string{"read"},
@@ -67,9 +66,9 @@ func (t *ElasticsearchHandlerTestSuite) TestRoleDelete() {
 }
 
 func (t *ElasticsearchHandlerTestSuite) TestRoleUpdate() {
-	role := &olivere.XPackSecurityRole{
+	role := &XPackSecurityRole{
 		Cluster: []string{"all"},
-		Indices: []olivere.XPackSecurityIndicesPermissions{
+		Indices: []XPackSecurityIndicesPermissions{
 			{
 				Names:      []string{"logstash-*"},
 				Privileges: []string{"read"},
@@ -95,11 +94,11 @@ func (t *ElasticsearchHandlerTestSuite) TestRoleUpdate() {
 }
 
 func (t *ElasticsearchHandlerTestSuite) TestRoleDiff() {
-	var actual, expected *olivere.XPackSecurityRole
+	var actual, expected *XPackSecurityRole
 
-	expected = &olivere.XPackSecurityRole{
+	expected = &XPackSecurityRole{
 		Cluster: []string{"all"},
-		Indices: []olivere.XPackSecurityIndicesPermissions{
+		Indices: []XPackSecurityIndicesPermissions{
 			{
 				Names:      []string{"logstash-*"},
 				Privileges: []string{"read"},
@@ -116,9 +115,9 @@ func (t *ElasticsearchHandlerTestSuite) TestRoleDiff() {
 	assert.NotEmpty(t.T(), diff)
 
 	// When role is the same
-	actual = &olivere.XPackSecurityRole{
+	actual = &XPackSecurityRole{
 		Cluster: []string{"all"},
-		Indices: []olivere.XPackSecurityIndicesPermissions{
+		Indices: []XPackSecurityIndicesPermissions{
 			{
 				Names:      []string{"logstash-*"},
 				Privileges: []string{"read"},
@@ -132,7 +131,7 @@ func (t *ElasticsearchHandlerTestSuite) TestRoleDiff() {
 	assert.Empty(t.T(), diff)
 
 	// When role is not the same
-	expected.Indices = []olivere.XPackSecurityIndicesPermissions{
+	expected.Indices = []XPackSecurityIndicesPermissions{
 		{
 			Names:      []string{"test-*"},
 			Privileges: []string{"read"},

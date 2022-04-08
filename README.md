@@ -248,7 +248,7 @@ __Sample__:
 apiVersion: elk.k8s.webcenter.fr/v1alpha1
 kind: ElasticsearchSnapshotRepository
 metadata:
-  name: policy-log
+  name: backup
   namespace: elk
 spec:
   elasticsearchRef:
@@ -352,7 +352,8 @@ spec:
       privileges:
         - 'admin'
         - 'read'
-      resources: '*'
+      resources: 
+        - '*'
   run_as:
     - 'other_user'
 ```

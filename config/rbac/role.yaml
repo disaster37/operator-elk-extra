@@ -3,9 +3,19 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   creationTimestamp: null
-  name: manager-role
+  name: operator-elk-extra
 rules:
-- resources:
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - get
+  - patch
+- apiGroups:
+  - ""
+  resources:
   - secrets
   verbs:
   - get
@@ -13,12 +23,20 @@ rules:
   - patch
   - update
   - watch
-- resources:
+- apiGroups:
+  - ""
+  resources:
   - secrets/status
   verbs:
   - get
   - patch
   - update
+- apiGroups:
+  - elasticsearch.k8s.elastic.co
+  resources:
+  - elasticsearches
+  verbs:
+  - get
 - apiGroups:
   - elk.k8s.webcenter.fr
   resources:

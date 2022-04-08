@@ -186,6 +186,7 @@ func (r *UserReconciler) Update(ctx context.Context, resource resource.Resource,
 	user := resource.(*elkv1alpha1.User)
 	var d any
 	var passwordHash string
+	isUpdatePasssword := false
 
 	// Create user on Elasticsearch
 	expectedUser, err := user.ToUser()
@@ -206,11 +207,13 @@ func (r *UserReconciler) Update(ctx context.Context, resource resource.Resource,
 			if err != nil {
 				return res, errors.Wrap(err, "Error when hash password")
 			}
+			isUpdatePasssword = true
 		}
 	} else {
 		if user.Spec.PasswordHash == user.Status.PasswordHash {
 			expectedUser.PasswordHash = ""
 			passwordHash = user.Spec.PasswordHash
+			isUpdatePasssword = true
 		}
 	}
 
@@ -218,7 +221,7 @@ func (r *UserReconciler) Update(ctx context.Context, resource resource.Resource,
 		return res, errors.Wrap(err, "Error when update user")
 	}
 
-	if passwordHash != "" {
+	if isUpdatePasssword {
 		user.Status.PasswordHash = passwordHash
 	}
 
@@ -268,6 +271,7 @@ func (r *UserReconciler) Diff(resource resource.Resource, data map[string]interf
 		FullName: currentUserTmp.Fullname,
 		Metadata: currentUserTmp.Metadata,
 		Roles:    currentUserTmp.Roles,
+		Password: user.Status.PasswordHash,
 	}
 
 	if user.Spec.Secret != nil {
@@ -276,10 +280,13 @@ func (r *UserReconciler) Diff(resource resource.Resource, data map[string]interf
 			return diff, err
 		}
 		password := d.(string)
-		currentUser.Password = user.Status.PasswordHash
-		expectedUser.Password = password
-	} else {
-		currentUser.PasswordHash = user.Status.PasswordHash
+
+		// Check if password change, bcrypt generate hash different each time
+		if !CheckPasswordHash(password, user.Status.PasswordHash) {
+			expectedUser.Password = "XXX"
+		} else {
+			expectedUser.Password = user.Status.PasswordHash
+		}
 	}
 
 	diffStr, err := esHandler.UserDiff(currentUser, expectedUser)

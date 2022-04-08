@@ -296,7 +296,7 @@ func (mr *MockElasticsearchHandlerMockRecorder) RoleDelete(arg0 interface{}) *go
 }
 
 // RoleDiff mocks base method.
-func (m *MockElasticsearchHandler) RoleDiff(arg0, arg1 *elastic.XPackSecurityRole) (string, error) {
+func (m *MockElasticsearchHandler) RoleDiff(arg0, arg1 *elasticsearchhandler.XPackSecurityRole) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RoleDiff", arg0, arg1)
 	ret0, _ := ret[0].(string)
@@ -311,10 +311,10 @@ func (mr *MockElasticsearchHandlerMockRecorder) RoleDiff(arg0, arg1 interface{})
 }
 
 // RoleGet mocks base method.
-func (m *MockElasticsearchHandler) RoleGet(arg0 string) (*elastic.XPackSecurityRole, error) {
+func (m *MockElasticsearchHandler) RoleGet(arg0 string) (*elasticsearchhandler.XPackSecurityRole, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RoleGet", arg0)
-	ret0, _ := ret[0].(*elastic.XPackSecurityRole)
+	ret0, _ := ret[0].(*elasticsearchhandler.XPackSecurityRole)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -384,7 +384,7 @@ func (mr *MockElasticsearchHandlerMockRecorder) RoleMappingUpdate(arg0, arg1 int
 }
 
 // RoleUpdate mocks base method.
-func (m *MockElasticsearchHandler) RoleUpdate(arg0 string, arg1 *elastic.XPackSecurityRole) error {
+func (m *MockElasticsearchHandler) RoleUpdate(arg0 string, arg1 *elasticsearchhandler.XPackSecurityRole) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RoleUpdate", arg0, arg1)
 	ret0, _ := ret[0].(error)

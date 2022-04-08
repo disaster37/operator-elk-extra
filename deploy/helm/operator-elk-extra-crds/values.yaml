@@ -1,0 +1,10 @@
+---
+
+# nameOverride is the short name for the deployment. Leave empty to let Helm generate a name using chart values.
+nameOverride: "operator-elk-extra"
+
+# fullnameOverride is the full name for the deployment. Leave empty to let Helm generate a name using chart values.
+fullnameOverride: "operator-elk-extra"
+
+# createClusterScopedResources determines whether cluster-scoped resources (ClusterRoles, ClusterRoleBindings) should be created.
+createClusterScopedResources: true

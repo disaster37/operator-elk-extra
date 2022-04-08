@@ -3,6 +3,7 @@ package elasticsearchhandler
 import (
 	"encoding/json"
 	"reflect"
+	"strings"
 
 	"github.com/elastic/go-ucfg"
 	ucfgjson "github.com/elastic/go-ucfg/json"
@@ -30,7 +31,7 @@ func standartDiff(actual, expected any, log *logrus.Entry, ignore map[string]any
 		return diff, err
 	}
 	actualUnpack := reflect.New(reflect.TypeOf(actual)).Interface()
-	if err = actualConf.Unpack(actualUnpack); err != nil {
+	if err = actualConf.Unpack(actualUnpack, ucfg.StructTag("json")); err != nil {
 		return diff, err
 	}
 	expectedConf, err := ucfgjson.NewConfig(expectedByte, ucfg.PathSep("."))
@@ -42,7 +43,12 @@ func standartDiff(actual, expected any, log *logrus.Entry, ignore map[string]any
 		return diff, err
 	}
 	expectedUnpack := reflect.New(reflect.TypeOf(expected)).Interface()
-	if err = expectedConf.Unpack(expectedUnpack); err != nil {
+	if err = expectedConf.Unpack(expectedUnpack, ucfg.StructTag("json")); err != nil {
+		return diff, err
+	}
+
+	test := map[string]any{}
+	if err = expectedConf.Unpack(&test); err != nil {
 		return diff, err
 	}
 
@@ -96,7 +102,19 @@ func ignoreDiff(c *ucfg.Config, ignore map[string]any) (err error) {
 					}
 				}
 				if needRemoveKey {
+
+					childPath := strings.Join(strings.Split(key, ".")[:1], ".")
+					child, err := c.Child(childPath, -1, ucfg.PathSep("."))
+					if err != nil {
+						return err
+					}
 					c.Remove(key, -1, ucfg.PathSep("."))
+					nb := len(child.GetFields())
+					// Remove parent if no children
+					if nb == 0 {
+						c.Remove(childPath, -1, ucfg.PathSep("."))
+					}
+
 				}
 			}
 		}

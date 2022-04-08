@@ -5,9 +5,9 @@ import (
 	"time"
 
 	elkv1alpha1 "github.com/disaster37/operator-elk-extra/api/v1alpha1"
+	"github.com/disaster37/operator-elk-extra/pkg/elasticsearchhandler"
 	"github.com/disaster37/operator-elk-extra/pkg/helpers"
 	"github.com/golang/mock/gomock"
-	olivere "github.com/olivere/elastic/v7"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -35,7 +35,7 @@ func (t *ControllerTestSuite) TestElasticsearchRoleReconciler() {
 		Name:      roleName,
 		Namespace: "default",
 	}
-	t.mockElasticsearchHandler.EXPECT().RoleGet(gomock.Any()).AnyTimes().DoAndReturn(func(name string) (*olivere.XPackSecurityRole, error) {
+	t.mockElasticsearchHandler.EXPECT().RoleGet(gomock.Any()).AnyTimes().DoAndReturn(func(name string) (*elasticsearchhandler.XPackSecurityRole, error) {
 
 		switch test {
 		case "no_role":
@@ -43,19 +43,19 @@ func (t *ControllerTestSuite) TestElasticsearchRoleReconciler() {
 				return nil, nil
 			} else {
 
-				resp := &olivere.XPackSecurityRole{
+				resp := &elasticsearchhandler.XPackSecurityRole{
 					RunAs: []string{"test"},
 				}
 				return resp, nil
 			}
 		case "role_update":
 			if !isUpdated {
-				resp := &olivere.XPackSecurityRole{
+				resp := &elasticsearchhandler.XPackSecurityRole{
 					RunAs: []string{"test"},
 				}
 				return resp, nil
 			} else {
-				resp := &olivere.XPackSecurityRole{
+				resp := &elasticsearchhandler.XPackSecurityRole{
 					RunAs: []string{"test2"},
 				}
 				return resp, nil
@@ -65,7 +65,7 @@ func (t *ControllerTestSuite) TestElasticsearchRoleReconciler() {
 		return nil, nil
 
 	})
-	t.mockElasticsearchHandler.EXPECT().RoleDiff(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(func(actual, expected *olivere.XPackSecurityRole) (string, error) {
+	t.mockElasticsearchHandler.EXPECT().RoleDiff(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(func(actual, expected *elasticsearchhandler.XPackSecurityRole) (string, error) {
 		switch test {
 		case "no_role":
 			if !isCreated {
@@ -84,7 +84,7 @@ func (t *ControllerTestSuite) TestElasticsearchRoleReconciler() {
 		return "", nil
 
 	})
-	t.mockElasticsearchHandler.EXPECT().RoleUpdate(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(func(name string, policy *olivere.XPackSecurityRole) error {
+	t.mockElasticsearchHandler.EXPECT().RoleUpdate(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(func(name string, policy *elasticsearchhandler.XPackSecurityRole) error {
 		switch test {
 		case "no_role":
 			isCreated = true

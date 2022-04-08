@@ -1,0 +1,96 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: '[]'
+    capabilities: Basic Install
+  name: operator-elk-extra.v0.0.0
+  namespace: placeholder
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions:
+    owned:
+    - description: ElasticsearchComponentTemplate is the Schema for the elasticsearchcomponenttemplates
+        API
+      displayName: Elasticsearch Component Template
+      kind: ElasticsearchComponentTemplate
+      name: elasticsearchcomponenttemplates.elk.k8s.webcenter.fr
+      version: v1alpha1
+    - description: ElasticsearchILM is the Schema for the elasticsearchilms API
+      displayName: Elasticsearch ILM
+      kind: ElasticsearchILM
+      name: elasticsearchilms.elk.k8s.webcenter.fr
+      version: v1alpha1
+    - description: ElasticsearchIndexTemplate is the Schema for the elasticsearchindextemplates
+        API
+      displayName: Elasticsearch Index Template
+      kind: ElasticsearchIndexTemplate
+      name: elasticsearchindextemplates.elk.k8s.webcenter.fr
+      version: v1alpha1
+    - description: ElasticsearchRole is the Schema for the elasticsearchroles API
+      displayName: Elasticsearch Role
+      kind: ElasticsearchRole
+      name: elasticsearchroles.elk.k8s.webcenter.fr
+      version: v1alpha1
+    - description: ElasticsearchSLM is the Schema for the elasticsearchslms API
+      displayName: Elasticsearch SLM
+      kind: ElasticsearchSLM
+      name: elasticsearchslms.elk.k8s.webcenter.fr
+      version: v1alpha1
+    - description: ElasticsearchSnapshotRepository is the Schema for the elasticsearchsnapshotrepositories
+        API
+      displayName: Elasticsearch Snapshot Repository
+      kind: ElasticsearchSnapshotRepository
+      name: elasticsearchsnapshotrepositories.elk.k8s.webcenter.fr
+      version: v1alpha1
+    - description: ElasticsearchWatcher is the Schema for the elasticsearchwatchers
+        API
+      displayName: Elasticsearch Watcher
+      kind: ElasticsearchWatcher
+      name: elasticsearchwatchers.elk.k8s.webcenter.fr
+      version: v1alpha1
+    - description: License is the Schema for the licenses API
+      displayName: License
+      kind: License
+      name: licenses.elk.k8s.webcenter.fr
+      version: v1alpha1
+    - description: RoleMapping is the Schema for the rolemappings API
+      displayName: Role Mapping
+      kind: RoleMapping
+      name: rolemappings.elk.k8s.webcenter.fr
+      version: v1alpha1
+    - description: User is the Schema for the users API
+      displayName: User
+      kind: User
+      name: users.elk.k8s.webcenter.fr
+      version: v1alpha1
+  description: it add some resource to config Elasticsearch from API
+  displayName: operator-elk-extra
+  icon:
+  - base64data: ""
+    mediatype: ""
+  install:
+    spec:
+      deployments: null
+    strategy: ""
+  installModes:
+  - supported: false
+    type: OwnNamespace
+  - supported: false
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
+  keywords:
+  - elk
+  links:
+  - name: Operator Elk Extra
+    url: https://operator-elk-extra.domain
+  maintainers:
+  - email: linuxworkgroup@hotmail.com
+    name: disaster37
+  maturity: alpha
+  provider:
+    name: disaster37
+  version: 0.0.0

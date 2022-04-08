@@ -55,8 +55,8 @@ type SecretReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=,resources=secrets,verbs=get;list;watch;update;patch
-//+kubebuilder:rbac:groups=,resources=secrets/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups="",resources=secrets/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=elk.k8s.webcenter.fr,resources=licenses,verbs=get;list;watch
 //+kubebuilder:rbac:groups=elk.k8s.webcenter.fr,resources=licenses/status,verbs=get;update;patch
 

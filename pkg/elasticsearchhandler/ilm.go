@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var ignorePolicyDiff = map[string]any{
+var ignoreILMPolicyDiff = map[string]any{
 	"phases.delete.actions.delete.delete_searchable_snapshot": true,
 }
 
@@ -116,5 +116,5 @@ func (h *ElasticsearchHandlerImpl) ILMDiff(actual, expected *olivere.XPackIlmGet
 	if expected != nil {
 		expectedPolicy = expected.Policy
 	}
-	return standartDiff(actualPolicy, expectedPolicy, h.log, ignorePolicyDiff)
+	return standartDiff(actualPolicy, expectedPolicy, h.log, ignoreILMPolicyDiff)
 }

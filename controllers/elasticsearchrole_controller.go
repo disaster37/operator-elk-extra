@@ -19,12 +19,12 @@ package controllers
 import (
 	"context"
 
+	"github.com/davecgh/go-spew/spew"
 	elkv1alpha1 "github.com/disaster37/operator-elk-extra/api/v1alpha1"
 	"github.com/disaster37/operator-elk-extra/pkg/elasticsearchhandler"
 	"github.com/disaster37/operator-sdk-extra/pkg/controller"
 	"github.com/disaster37/operator-sdk-extra/pkg/helper"
 	"github.com/disaster37/operator-sdk-extra/pkg/resource"
-	olivere "github.com/olivere/elastic/v7"
 	"github.com/pkg/errors"
 	core "k8s.io/api/core/v1"
 	condition "k8s.io/apimachinery/pkg/api/meta"
@@ -156,14 +156,14 @@ func (r *ElasticsearchRoleReconciler) Delete(ctx context.Context, resource resou
 func (r *ElasticsearchRoleReconciler) Diff(resource resource.Resource, data map[string]interface{}, meta interface{}) (diff controller.Diff, err error) {
 	esHandler := meta.(elasticsearchhandler.ElasticsearchHandler)
 	role := resource.(*elkv1alpha1.ElasticsearchRole)
-	var currentRole *olivere.XPackSecurityRole
+	var currentRole *elasticsearchhandler.XPackSecurityRole
 	var d any
 
 	d, err = helper.Get(data, "role")
 	if err != nil {
 		return diff, err
 	}
-	currentRole = d.(*olivere.XPackSecurityRole)
+	currentRole = d.(*elasticsearchhandler.XPackSecurityRole)
 	expectedRole, err := role.ToRole()
 	if err != nil {
 		return diff, err
@@ -179,6 +179,9 @@ func (r *ElasticsearchRoleReconciler) Diff(resource resource.Resource, data map[
 		diff.Diff = "Elasticsearch role not exist"
 		return diff, nil
 	}
+
+	r.log.Debug(spew.Sprint(currentRole))
+	r.log.Debug(spew.Sprint(expectedRole))
 
 	diffStr, err := esHandler.RoleDiff(currentRole, expectedRole)
 	if err != nil {

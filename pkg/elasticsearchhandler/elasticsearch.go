@@ -33,10 +33,10 @@ type ElasticsearchHandler interface {
 	SnapshotRepositoryDiff(actual, expected *olivere.SnapshotRepositoryMetaData) (diff string, err error)
 
 	// Role scope
-	RoleUpdate(name string, role *olivere.XPackSecurityRole) (err error)
+	RoleUpdate(name string, role *XPackSecurityRole) (err error)
 	RoleDelete(name string) (err error)
-	RoleGet(name string) (role *olivere.XPackSecurityRole, err error)
-	RoleDiff(actual, expected *olivere.XPackSecurityRole) (diff string, err error)
+	RoleGet(name string) (role *XPackSecurityRole, err error)
+	RoleDiff(actual, expected *XPackSecurityRole) (diff string, err error)
 
 	// Role mapping scope
 	RoleMappingUpdate(name string, roleMapping *olivere.XPackSecurityRoleMapping) (err error)

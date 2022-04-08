@@ -6,12 +6,41 @@ import (
 	"encoding/json"
 	"io/ioutil"
 
-	olivere "github.com/olivere/elastic/v7"
 	"github.com/pkg/errors"
 )
 
+var ignoreRoleDiff = map[string]any{
+	"transient_metadata.enabled": true,
+}
+
+// Some fix not provided by olivere
+type XPackSecurityRole struct {
+	RunAs             []string                             `json:"run_as,omitempty"`
+	Cluster           []string                             `json:"cluster,omitempty"`
+	Indices           []XPackSecurityIndicesPermissions    `json:"indices,omitempty"`
+	Applications      []XPackSecurityApplicationPrivileges `json:"applications,omitempty"`
+	Global            map[string]interface{}               `json:"global,omitempty"`
+	Metadata          map[string]interface{}               `json:"metadata,omitempty"`
+	TransientMetadata map[string]interface{}               `json:"transient_metadata,omitempty"`
+}
+
+// XPackSecurityApplicationPrivileges is the application privileges object
+type XPackSecurityApplicationPrivileges struct {
+	Application string   `json:"application"`
+	Privileges  []string `json:"privileges,omitempty"`
+	Resources   []string `json:"resources,omitempty"`
+}
+
+// XPackSecurityIndicesPermissions is the indices permission object
+type XPackSecurityIndicesPermissions struct {
+	Names         []string    `json:"names"`
+	Privileges    []string    `json:"privileges"`
+	FieldSecurity interface{} `json:"field_security,omitempty"`
+	Query         string      `json:"query,omitempty"`
+}
+
 // RoleUpdate permit to update role
-func (h *ElasticsearchHandlerImpl) RoleUpdate(name string, role *olivere.XPackSecurityRole) (err error) {
+func (h *ElasticsearchHandlerImpl) RoleUpdate(name string, role *XPackSecurityRole) (err error) {
 
 	data, err := json.Marshal(role)
 	if err != nil {
@@ -67,7 +96,7 @@ func (h *ElasticsearchHandlerImpl) RoleDelete(name string) (err error) {
 }
 
 // RoleGet permit to get role
-func (h *ElasticsearchHandlerImpl) RoleGet(name string) (role *olivere.XPackSecurityRole, err error) {
+func (h *ElasticsearchHandlerImpl) RoleGet(name string) (role *XPackSecurityRole, err error) {
 
 	res, err := h.client.API.Security.GetRole(
 		h.client.API.Security.GetRole.WithContext(context.Background()),
@@ -91,7 +120,7 @@ func (h *ElasticsearchHandlerImpl) RoleGet(name string) (role *olivere.XPackSecu
 	}
 
 	h.log.Debugf("Get role %s successfully:\n%s", name, string(b))
-	roleResp := make(olivere.XPackSecurityGetRoleResponse)
+	roleResp := make(map[string]XPackSecurityRole)
 	err = json.Unmarshal(b, &roleResp)
 	if err != nil {
 		return nil, err
@@ -103,6 +132,6 @@ func (h *ElasticsearchHandlerImpl) RoleGet(name string) (role *olivere.XPackSecu
 }
 
 // RoleDiff permit to check if 2 role are the same
-func (h *ElasticsearchHandlerImpl) RoleDiff(actual, expected *olivere.XPackSecurityRole) (diff string, err error) {
-	return standartDiff(actual, expected, h.log, nil)
+func (h *ElasticsearchHandlerImpl) RoleDiff(actual, expected *XPackSecurityRole) (diff string, err error) {
+	return standartDiff(actual, expected, h.log, ignoreRoleDiff)
 }

@@ -3,7 +3,8 @@ module github.com/disaster37/operator-elk-extra
 go 1.18
 
 require (
-	github.com/disaster37/operator-sdk-extra v0.0.15
+	github.com/davecgh/go-spew v1.1.1
+	github.com/disaster37/operator-sdk-extra v0.0.17
 	github.com/elastic/go-elasticsearch/v8 v8.1.0
 	github.com/elastic/go-ucfg v0.8.4
 	github.com/go-logr/logr v1.2.3
@@ -15,7 +16,9 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.1
+	github.com/urfave/cli/v2 v2.4.0
 	go.uber.org/zap v1.21.0
+	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
 	golang.org/x/net v0.0.0-20220225172249-27dd8689420f
 	k8s.io/api v0.23.5
 	k8s.io/apimachinery v0.23.5
@@ -33,7 +36,7 @@ require (
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
-	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/cpuguy83/go-md2man/v2 v2.0.1 // indirect
 	github.com/elastic/elastic-transport-go/v8 v8.1.0 // indirect
 	github.com/evanphx/json-patch v4.12.0+incompatible // indirect
 	github.com/form3tech-oss/jwt-go v3.2.3+incompatible // indirect
@@ -57,10 +60,10 @@ require (
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.33.0 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
+	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
-	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5 // indirect
 	golang.org/x/oauth2 v0.0.0-20220223155221-ee480838109b // indirect
 	golang.org/x/sys v0.0.0-20220224120231-95c6836cb0e7 // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect

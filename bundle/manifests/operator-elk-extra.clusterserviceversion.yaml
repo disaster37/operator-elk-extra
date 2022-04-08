@@ -1,0 +1,295 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: |-
+      [
+        {
+          "apiVersion": "elk.k8s.webcenter.fr/v1alpha1",
+          "kind": "ElasticsearchComponentTemplate",
+          "metadata": {
+            "name": "elasticsearchcomponenttemplate-sample"
+          },
+          "spec": null
+        },
+        {
+          "apiVersion": "elk.k8s.webcenter.fr/v1alpha1",
+          "kind": "ElasticsearchILM",
+          "metadata": {
+            "name": "elasticsearchilm-sample"
+          },
+          "spec": null
+        },
+        {
+          "apiVersion": "elk.k8s.webcenter.fr/v1alpha1",
+          "kind": "ElasticsearchIndexTemplate",
+          "metadata": {
+            "name": "elasticsearchindextemplate-sample"
+          },
+          "spec": null
+        },
+        {
+          "apiVersion": "elk.k8s.webcenter.fr/v1alpha1",
+          "kind": "ElasticsearchRole",
+          "metadata": {
+            "name": "elasticsearchrole-sample"
+          },
+          "spec": null
+        },
+        {
+          "apiVersion": "elk.k8s.webcenter.fr/v1alpha1",
+          "kind": "ElasticsearchSLM",
+          "metadata": {
+            "name": "elasticsearchslm-sample"
+          },
+          "spec": null
+        },
+        {
+          "apiVersion": "elk.k8s.webcenter.fr/v1alpha1",
+          "kind": "ElasticsearchSnapshotRepository",
+          "metadata": {
+            "name": "elasticsearchsnapshotrepository-sample"
+          },
+          "spec": null
+        },
+        {
+          "apiVersion": "elk.k8s.webcenter.fr/v1alpha1",
+          "kind": "ElasticsearchWatcher",
+          "metadata": {
+            "name": "elasticsearchwatcher-sample"
+          },
+          "spec": null
+        },
+        {
+          "apiVersion": "elk.k8s.webcenter.fr/v1alpha1",
+          "kind": "License",
+          "metadata": {
+            "name": "license-sample"
+          },
+          "spec": null
+        },
+        {
+          "apiVersion": "elk.k8s.webcenter.fr/v1alpha1",
+          "kind": "RoleMapping",
+          "metadata": {
+            "name": "rolemapping-sample"
+          },
+          "spec": null
+        },
+        {
+          "apiVersion": "elk.k8s.webcenter.fr/v1alpha1",
+          "kind": "User",
+          "metadata": {
+            "name": "user-sample"
+          },
+          "spec": null
+        }
+      ]
+    capabilities: Basic Install
+    operators.operatorframework.io/builder: operator-sdk-v1.18.0+git
+    operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
+  name: operator-elk-extra.v0.0.1
+  namespace: placeholder
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions:
+    owned:
+    - description: ElasticsearchComponentTemplate is the Schema for the elasticsearchcomponenttemplates
+        API
+      displayName: Elasticsearch Component Template
+      kind: ElasticsearchComponentTemplate
+      name: elasticsearchcomponenttemplates.elk.k8s.webcenter.fr
+      version: v1alpha1
+    - description: ElasticsearchILM is the Schema for the elasticsearchilms API
+      displayName: Elasticsearch ILM
+      kind: ElasticsearchILM
+      name: elasticsearchilms.elk.k8s.webcenter.fr
+      version: v1alpha1
+    - description: ElasticsearchIndexTemplate is the Schema for the elasticsearchindextemplates
+        API
+      displayName: Elasticsearch Index Template
+      kind: ElasticsearchIndexTemplate
+      name: elasticsearchindextemplates.elk.k8s.webcenter.fr
+      version: v1alpha1
+    - description: ElasticsearchRole is the Schema for the elasticsearchroles API
+      displayName: Elasticsearch Role
+      kind: ElasticsearchRole
+      name: elasticsearchroles.elk.k8s.webcenter.fr
+      version: v1alpha1
+    - description: ElasticsearchSLM is the Schema for the elasticsearchslms API
+      displayName: Elasticsearch SLM
+      kind: ElasticsearchSLM
+      name: elasticsearchslms.elk.k8s.webcenter.fr
+      version: v1alpha1
+    - description: ElasticsearchSnapshotRepository is the Schema for the elasticsearchsnapshotrepositories
+        API
+      displayName: Elasticsearch Snapshot Repository
+      kind: ElasticsearchSnapshotRepository
+      name: elasticsearchsnapshotrepositories.elk.k8s.webcenter.fr
+      version: v1alpha1
+    - description: ElasticsearchWatcher is the Schema for the elasticsearchwatchers
+        API
+      displayName: Elasticsearch Watcher
+      kind: ElasticsearchWatcher
+      name: elasticsearchwatchers.elk.k8s.webcenter.fr
+      version: v1alpha1
+    - description: License is the Schema for the licenses API
+      displayName: License
+      kind: License
+      name: licenses.elk.k8s.webcenter.fr
+      version: v1alpha1
+    - description: RoleMapping is the Schema for the rolemappings API
+      displayName: Role Mapping
+      kind: RoleMapping
+      name: rolemappings.elk.k8s.webcenter.fr
+      version: v1alpha1
+    - description: User is the Schema for the users API
+      displayName: User
+      kind: User
+      name: users.elk.k8s.webcenter.fr
+      version: v1alpha1
+  description: it add some resource to config Elasticsearch from API
+  displayName: operator-elk-extra
+  icon:
+  - base64data: ""
+    mediatype: ""
+  install:
+    spec:
+      clusterPermissions:
+      - rules:
+        - apiGroups:
+          - authentication.k8s.io
+          resources:
+          - tokenreviews
+          verbs:
+          - create
+        - apiGroups:
+          - authorization.k8s.io
+          resources:
+          - subjectaccessreviews
+          verbs:
+          - create
+        serviceAccountName: operator-elk-extra-controller-manager
+      deployments:
+      - name: operator-elk-extra-controller-manager
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              control-plane: controller-manager
+          strategy: {}
+          template:
+            metadata:
+              annotations:
+                kubectl.kubernetes.io/default-container: manager
+              labels:
+                control-plane: controller-manager
+            spec:
+              containers:
+              - args:
+                - --secure-listen-address=0.0.0.0:8443
+                - --upstream=http://127.0.0.1:8080/
+                - --logtostderr=true
+                - --v=0
+                image: gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0
+                name: kube-rbac-proxy
+                ports:
+                - containerPort: 8443
+                  name: https
+                  protocol: TCP
+                resources:
+                  limits:
+                    cpu: 500m
+                    memory: 128Mi
+                  requests:
+                    cpu: 5m
+                    memory: 64Mi
+              - args:
+                - --health-probe-bind-address=:8081
+                - --metrics-bind-address=127.0.0.1:8080
+                - --leader-elect
+                command:
+                - /manager
+                image: webcenter/operator-elk-extra:0.0.1
+                livenessProbe:
+                  httpGet:
+                    path: /healthz
+                    port: 8081
+                  initialDelaySeconds: 15
+                  periodSeconds: 20
+                name: manager
+                readinessProbe:
+                  httpGet:
+                    path: /readyz
+                    port: 8081
+                  initialDelaySeconds: 5
+                  periodSeconds: 10
+                resources:
+                  limits:
+                    cpu: 500m
+                    memory: 128Mi
+                  requests:
+                    cpu: 10m
+                    memory: 64Mi
+                securityContext:
+                  allowPrivilegeEscalation: false
+              securityContext:
+                runAsNonRoot: true
+              serviceAccountName: operator-elk-extra-controller-manager
+              terminationGracePeriodSeconds: 10
+      permissions:
+      - rules:
+        - apiGroups:
+          - ""
+          resources:
+          - configmaps
+          verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+        - apiGroups:
+          - coordination.k8s.io
+          resources:
+          - leases
+          verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+        - apiGroups:
+          - ""
+          resources:
+          - events
+          verbs:
+          - create
+          - patch
+        serviceAccountName: operator-elk-extra-controller-manager
+    strategy: deployment
+  installModes:
+  - supported: false
+    type: OwnNamespace
+  - supported: false
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
+  keywords:
+  - elk
+  links:
+  - name: Operator Elk Extra
+    url: https://operator-elk-extra.domain
+  maintainers:
+  - email: linuxworkgroup@hotmail.com
+    name: disaster37
+  maturity: alpha
+  provider:
+    name: disaster37
+  version: 0.0.1

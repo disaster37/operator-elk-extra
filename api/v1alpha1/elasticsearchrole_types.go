@@ -19,7 +19,7 @@ package v1alpha1
 import (
 	"encoding/json"
 
-	olivere "github.com/olivere/elastic/v7"
+	"github.com/disaster37/operator-elk-extra/pkg/elasticsearchhandler"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -67,18 +67,26 @@ type ElasticsearchRoleSpec struct {
 
 // ElasticsearchRoleSpecApplicationPrivileges is the application privileges object
 type ElasticsearchRoleSpecApplicationPrivileges struct {
-	Application string   `json:"application"`
-	Privileges  []string `json:"privileges"`
-	Resources   []string `json:"resources"`
+	Application string `json:"application"`
+
+	// +optional
+	Privileges []string `json:"privileges,omitempty"`
+
+	// +optional
+	Resources []string `json:"resources,omitempty"`
 }
 
 // ElasticsearchRoleSpecIndicesPermissions is the indices permission object
 type ElasticsearchRoleSpecIndicesPermissions struct {
 	Names      []string `json:"names"`
 	Privileges []string `json:"privileges"`
+
 	// JSON string
+	// +optional
 	FieldSecurity string `json:"field_security,omitempty"`
-	Query         string `json:"query"`
+
+	// +optional
+	Query string `json:"query,omitempty"`
 }
 
 // ElasticsearchRoleStatus defines the observed state of ElasticsearchRole
@@ -125,8 +133,8 @@ func (h *ElasticsearchRole) GetStatus() any {
 }
 
 // ToComponentTemplate permit to convert current spec to component template spec
-func (h *ElasticsearchRole) ToRole() (*olivere.XPackSecurityRole, error) {
-	role := &olivere.XPackSecurityRole{
+func (h *ElasticsearchRole) ToRole() (*elasticsearchhandler.XPackSecurityRole, error) {
+	role := &elasticsearchhandler.XPackSecurityRole{
 		Cluster: h.Spec.Cluster,
 		RunAs:   h.Spec.RunAs,
 	}
@@ -156,9 +164,9 @@ func (h *ElasticsearchRole) ToRole() (*olivere.XPackSecurityRole, error) {
 	}
 
 	if h.Spec.Applications != nil {
-		role.Applications = make([]olivere.XPackSecurityApplicationPrivileges, 0, len(h.Spec.Applications))
+		role.Applications = make([]elasticsearchhandler.XPackSecurityApplicationPrivileges, 0, len(h.Spec.Applications))
 		for _, application := range h.Spec.Applications {
-			role.Applications = append(role.Applications, olivere.XPackSecurityApplicationPrivileges{
+			role.Applications = append(role.Applications, elasticsearchhandler.XPackSecurityApplicationPrivileges{
 				Application: application.Application,
 				Privileges:  application.Privileges,
 				Resources:   application.Resources,
@@ -167,9 +175,9 @@ func (h *ElasticsearchRole) ToRole() (*olivere.XPackSecurityRole, error) {
 	}
 
 	if h.Spec.Indices != nil {
-		role.Indices = make([]olivere.XPackSecurityIndicesPermissions, 0, len(h.Spec.Indices))
+		role.Indices = make([]elasticsearchhandler.XPackSecurityIndicesPermissions, 0, len(h.Spec.Indices))
 		for _, indice := range h.Spec.Indices {
-			i := olivere.XPackSecurityIndicesPermissions{
+			i := elasticsearchhandler.XPackSecurityIndicesPermissions{
 				Names:      indice.Names,
 				Privileges: indice.Privileges,
 				Query:      indice.Query,
