@@ -34,3 +34,49 @@ jobs:
           files: cover.out
           flags: unittests
           fail_ci_if_error: true
+
+  helm-chart-cluster-wide:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Helm
+        uses: azure/setup-helm@v1
+        with:
+          version: v3.7.2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: "1.18"
+      - name: Update crds / roles
+        run: |
+          set -e
+          make manifests
+          make kustomize
+          bin/kustomize build config/crd > deploy/helm/operator-elk-extra-cluster-wide/custom-charts/operator-elk-extra-crds/templates/all-crds.yaml
+          cp config/rbac/*_editor_role.yaml deploy/helm/operator-elk-extra-cluster-wide/custom-charts/operator-elk-extra-roles/templates/
+          cp config/rbac/*_viewer_role.yaml deploy/helm/operator-elk-extra-cluster-wide/custom-charts/operator-elk-extra-roles/templates/
+          cp config/rbac/role.yaml deploy/helm/operator-elk-extra-cluster-wide/custom-charts/operator-elk-extra-roles/templates/
+          cp config/rbac/role_binding.yaml deploy/helm/operator-elk-extra-cluster-wide/custom-charts/operator-elk-extra-roles/templates/
+          sed -i /namespace: system/namespace: {{ .Release.Namespace }}/ deploy/helm/operator-elk-extra-cluster-wide/custom-charts/operator-elk-extra-roles/templates/role_binding.yaml
+      - name: Lint chart
+        run: |
+          cd deploy/helm/operator-elk-extra-cluster-wide
+          helm lint
+      - name: Create kind cluster
+        uses: helm/kind-action@v1.2.0
+      - name: Install chart
+        run: |
+          cd deploy/helm/operator-elk-extra-cluster-wide
+          helm install operator-elk-extra-cluster-wide . -n operator-elk-extra --create-namespace --wait
+      - name: Publish chart
+        uses: goodsmileduck/helm-push-action@v3.3.1
+        env:
+          SOURCE_DIR: "deploy/helm"
+          CHART_FOLDER: "operator-elk-extra-cluster-wide"
+          FORCE: "True"
+          CHARTMUSEUM_URL: "https://charts.webcenter.fr"
+          CHARTMUSEUM_USER: "${{ secrets.CHARTMUSEUM_USER }}"
+          CHARTMUSEUM_PASSWORD: ${{ secrets.CHARTMUSEUM_PASSWORD }}

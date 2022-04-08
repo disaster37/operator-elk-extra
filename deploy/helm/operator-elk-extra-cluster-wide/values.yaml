@@ -1,0 +1,3 @@
+---
+# createClusterScopedResources determines whether cluster-scoped resources (ClusterRoles and ClusterRolesBinding)
+createClusterScopedResources: true

@@ -1,0 +1,22 @@
+apiVersion: v2
+name: operator-elk-extra-cluster-wide
+description: A Helm chart for installing the CRDs and cluster roles needed by operator ELK extra
+type: application
+version: 0.0.1
+appVersion: "0.0.1"
+
+keywords:
+  - ELK
+  - elasticsearch
+  - kibana
+  - logstash
+  - Operator
+
+dependencies:
+  - name: operator-elk-extra-crds
+    repository: file://./custom-charts/operator-elk-extra-crds/
+    version: 0.0.1
+  - name: operator-elk-extra-roles
+    repository: file://./custom-charts/operator-elk-extra-roles/
+    version: 0.0.1
+    condition: createClusterScopedResources
