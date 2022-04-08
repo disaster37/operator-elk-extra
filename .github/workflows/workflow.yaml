@@ -64,6 +64,7 @@ jobs:
       - name: Lint chart
         run: |
           cd deploy/helm/operator-elk-extra-cluster-wide
+          helm dep update
           helm lint
       - name: Create kind cluster
         uses: helm/kind-action@v1.2.0
