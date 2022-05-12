@@ -2,10 +2,13 @@ package controllers
 
 import (
 	"context"
+	"testing"
 	"time"
 
 	elkv1alpha1 "github.com/disaster37/operator-elk-extra/api/v1alpha1"
 	"github.com/disaster37/operator-elk-extra/pkg/helpers"
+	"github.com/disaster37/operator-elk-extra/pkg/mocks"
+	"github.com/disaster37/operator-sdk-extra/pkg/test"
 	"github.com/golang/mock/gomock"
 	olivere "github.com/olivere/elastic/v7"
 	"github.com/pkg/errors"
@@ -21,324 +24,415 @@ import (
 )
 
 func (t *ControllerTestSuite) TestLicenseReconciler() {
-
-	var (
-		err       error
-		isTimeout bool
-		fetched   *elkv1alpha1.License
-		test      string
-		isCreated bool
-		isDeleted bool
-		isUpdated bool
-	)
-
-	licenseName := "t-license-" + helpers.RandomString(10)
 	key := types.NamespacedName{
-		Name:      licenseName,
+		Name:      "t-license-" + helpers.RandomString(10),
 		Namespace: "default",
 	}
-	t.mockElasticsearchHandler.EXPECT().LicenseGet().AnyTimes().DoAndReturn(func() (*olivere.XPackInfoLicense, error) {
+	license := &elkv1alpha1.License{}
+	data := map[string]any{}
 
-		switch test {
-		case "basic_license_without_license":
-			if !isCreated {
-				return nil, nil
-			} else {
-				return &olivere.XPackInfoLicense{
-					UID:  "test",
-					Type: "basic",
-				}, nil
-			}
-		case "enterprise_license_from_basic_license":
-			if !isCreated {
-				return &olivere.XPackInfoLicense{
-					UID:  "test",
-					Type: "basic",
-				}, nil
-			} else {
-				return &olivere.XPackInfoLicense{
-					UID:  "test",
-					Type: "gold",
-				}, nil
-			}
-		case "update_enterprise_license":
-			if !isUpdated {
-				return &olivere.XPackInfoLicense{
-					UID:  "test",
-					Type: "basic",
-				}, nil
-			} else {
-				return &olivere.XPackInfoLicense{
-					UID:  "test2",
-					Type: "gold",
-				}, nil
-			}
-		}
-
-		return nil, nil
-
-	})
-	t.mockElasticsearchHandler.EXPECT().LicenseDiff(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(func(actual, expected *olivere.XPackInfoLicense) bool {
-		switch test {
-		case "basic_license_without_license":
-			if !isCreated {
-				return true
-			} else {
-				return false
-			}
-		case "enterprise_license_from_basic_license":
-			if !isCreated {
-				return true
-			} else {
-				return false
-			}
-		case "update_enterprise_license":
-			if !isUpdated {
-				return true
-			} else {
-				return false
-			}
-		}
-
-		return false
-
-	})
-	t.mockElasticsearchHandler.EXPECT().LicenseEnableBasic().AnyTimes().DoAndReturn(func() error {
-		switch test {
-		case "basic_license_without_license":
-			if !isCreated {
-				isCreated = true
-				return nil
-			} else {
-				return nil
-			}
-		case "enterprise_license_from_basic_license":
-			return nil
-		case "update_enterprise_license":
-			return nil
-		case "delete_enterprise_license":
-			isDeleted = true
-			return nil
-		}
-
-		return nil
-	})
-	t.mockElasticsearchHandler.EXPECT().LicenseUpdate(gomock.Any()).AnyTimes().DoAndReturn(func(license string) error {
-		switch test {
-		case "basic_license_without_license":
-			return nil
-		case "enterprise_license_from_basic_license":
-			isCreated = true
-			return nil
-		case "update_enterprise_license":
-			isUpdated = true
-			return nil
-		}
-
-		return nil
-	})
-
-	// When add basic license when no license already exist
-	logrus.Info("==================================== When add basic license when no license already exist")
-	test = "basic_license_without_license"
-	toCreate := &elkv1alpha1.License{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      key.Name,
-			Namespace: key.Namespace,
-		},
-		Spec: elkv1alpha1.LicenseSpec{
-			ElasticsearchRefSpec: elkv1alpha1.ElasticsearchRefSpec{
-				Name: "test",
-			},
-			SecretName: key.Name,
-			Basic:      true,
-		},
+	testCase := test.NewTestCase(t.T(), t.k8sClient, key, license, 5*time.Second, data)
+	testCase.Steps = []test.TestStep{
+		doEnableBasicLicenseStep(),
+		doDeleteBasicLicenseStep(),
+		doUpdateToEnterpriseLicenseStep(),
+		doUpdateEnterpriseLicenseStep(),
+		doDeleteEnterpriseLicenseStep(),
 	}
-	if err = t.k8sClient.Create(context.Background(), toCreate); err != nil {
-		t.T().Fatal(err)
-	}
+	testCase.PreTest = doMockLicense(t.mockElasticsearchHandler)
 
-	isTimeout, err = RunWithTimeout(func() error {
-		fetched = &elkv1alpha1.License{}
-		if err := t.k8sClient.Get(context.Background(), key, fetched); err != nil {
-			t.T().Fatal(err)
-		}
-		if !condition.IsStatusConditionPresentAndEqual(fetched.Status.Conditions, licenseCondition, metav1.ConditionTrue) {
-			return errors.New("Not yet created")
-		}
-		return nil
-	}, time.Second*30, time.Second*1)
-	if err != nil || isTimeout {
-		t.T().Fatalf("Failed to get License: %s", err.Error())
-	}
-	assert.Empty(t.T(), fetched.Status.ExpireAt)
-	assert.Empty(t.T(), fetched.Status.LicenseHash)
-	assert.Equal(t.T(), "basic", fetched.Status.LicenseType)
-	assert.True(t.T(), condition.IsStatusConditionPresentAndEqual(fetched.Status.Conditions, licenseCondition, metav1.ConditionTrue))
-	time.Sleep(10 * time.Second)
+	testCase.Run()
+}
 
-	// When remove basic license
-	logrus.Info("==================================== When remove basic license")
-	wait := int64(0)
-	if err = t.k8sClient.Delete(context.Background(), fetched, &client.DeleteOptions{GracePeriodSeconds: &wait}); err != nil {
-		t.T().Fatal(err)
-	}
-	isTimeout, err = RunWithTimeout(func() error {
-		if err = t.k8sClient.Get(context.Background(), key, fetched); err != nil {
-			if k8serrors.IsNotFound(err) {
+func doMockLicense(mockES *mocks.MockElasticsearchHandler) func(stepName *string, data map[string]any) error {
+	return func(stepName *string, data map[string]any) (err error) {
+		isCreatedBasicLicense := false
+		isUpdatedToEnterpriseLicense := false
+		isUpdatedEnterpriseLicense := false
+
+		mockES.EXPECT().LicenseGet().AnyTimes().DoAndReturn(func() (*olivere.XPackInfoLicense, error) {
+			switch *stepName {
+			case "create_basic_license":
+				if !isCreatedBasicLicense {
+					return nil, nil
+				} else {
+					return &olivere.XPackInfoLicense{
+						UID:  "test",
+						Type: "basic",
+					}, nil
+				}
+			case "update_to_enterprise_license":
+				if !isUpdatedToEnterpriseLicense {
+					return &olivere.XPackInfoLicense{
+						UID:  "test",
+						Type: "basic",
+					}, nil
+				} else {
+					return &olivere.XPackInfoLicense{
+						UID:  "test",
+						Type: "gold",
+					}, nil
+				}
+			case "update_enterprise_license":
+				if !isUpdatedEnterpriseLicense {
+					return &olivere.XPackInfoLicense{
+						UID:  "test",
+						Type: "basic",
+					}, nil
+				} else {
+					return &olivere.XPackInfoLicense{
+						UID:  "test2",
+						Type: "gold",
+					}, nil
+				}
+			}
+
+			return nil, nil
+		})
+
+		mockES.EXPECT().LicenseDiff(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(func(actual, expected *olivere.XPackInfoLicense) bool {
+			switch *stepName {
+			case "create_basic_license":
+				if !isCreatedBasicLicense {
+					return true
+				} else {
+					return false
+				}
+			case "update_to_enterprise_license":
+				if !isUpdatedToEnterpriseLicense {
+					return true
+				} else {
+					return false
+				}
+			case "update_enterprise_license":
+				if !isUpdatedEnterpriseLicense {
+					return true
+				} else {
+					return false
+				}
+			}
+
+			return false
+		})
+
+		mockES.EXPECT().LicenseEnableBasic().AnyTimes().DoAndReturn(func() error {
+			switch *stepName {
+			case "create_basic_license":
+				if !isCreatedBasicLicense {
+					data["isCreatedBasicLicense"] = true
+					return nil
+				} else {
+					return nil
+				}
+			case "delete_enterprise_license":
+				data["isDeleted"] = true
 				return nil
 			}
-			t.T().Fatal(err)
-		}
 
-		return errors.New("Not yet deleted")
-	}, time.Second*30, time.Second*1)
-	if err != nil || isTimeout {
-		t.T().Fatalf("License stil exist: %s", err.Error())
-	}
-	time.Sleep(10 * time.Second)
+			return nil
+		})
 
-	// When add enterprise license when basic license already exist
-	logrus.Info("==================================== When add enterprise license when basic license already exist")
-
-	test = "enterprise_license_from_basic_license"
-	isCreated = false
-	licenseJson := `
-	{
-		"license": {
-			"uid": "test",
-			"type": "gold",
-			"issue_date_in_millis": 1629849600000,
-			"expiry_date_in_millis": 1661990399999,
-			"max_nodes": 15,
-			"issued_to": "test",
-			"issuer": "API",
-			"signature": "test",
-			"start_date_in_millis": 1629849600000
-		}
-	}
-	`
-	secret := &core.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      key.Name,
-			Namespace: key.Namespace,
-		},
-		Data: map[string][]byte{
-			"license": []byte(licenseJson),
-		},
-	}
-	toCreate = &elkv1alpha1.License{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      key.Name,
-			Namespace: key.Namespace,
-		},
-		Spec: elkv1alpha1.LicenseSpec{
-			ElasticsearchRefSpec: elkv1alpha1.ElasticsearchRefSpec{
-				Name: "test",
-			},
-			SecretName: key.Name,
-			Basic:      false,
-		},
-	}
-	if err = t.k8sClient.Create(context.Background(), secret); err != nil {
-		t.T().Fatal(err)
-	}
-	if err = t.k8sClient.Create(context.Background(), toCreate); err != nil {
-		t.T().Fatal(err)
-	}
-
-	isTimeout, err = RunWithTimeout(func() error {
-		fetched = &elkv1alpha1.License{}
-		if err := t.k8sClient.Get(context.Background(), key, fetched); err != nil {
-			t.T().Fatal(err)
-		}
-		if !condition.IsStatusConditionPresentAndEqual(fetched.Status.Conditions, licenseCondition, metav1.ConditionTrue) {
-			return errors.New("Not yet created")
-		}
-		return nil
-	}, time.Second*30, time.Second*1)
-	if err != nil || isTimeout {
-		t.T().Fatalf("Failed to get License: %s", err.Error())
-	}
-	assert.NotEmpty(t.T(), fetched.Status.ExpireAt)
-	assert.NotEmpty(t.T(), fetched.Status.LicenseHash)
-	assert.Equal(t.T(), "gold", fetched.Status.LicenseType)
-	assert.True(t.T(), condition.IsStatusConditionPresentAndEqual(fetched.Status.Conditions, licenseCondition, metav1.ConditionTrue))
-
-	// Check we add annotation on secret
-	if err := t.k8sClient.Get(context.Background(), key, secret); err != nil {
-		t.T().Fatal(err)
-	}
-	assert.Equal(t.T(), key.Name, secret.Annotations[licenseAnnotation])
-	time.Sleep(10 * time.Second)
-
-	// When update enterprise license
-	logrus.Info("==================================== When update enterprise license")
-	test = "update_enterprise_license"
-	currentHash := fetched.Status.LicenseHash
-	isUpdated = false
-	licenseJson = `
-	{
-		"license": {
-			"uid": "test2",
-			"type": "gold",
-			"issue_date_in_millis": 1629849600000,
-			"expiry_date_in_millis": 1661990399999,
-			"max_nodes": 15,
-			"issued_to": "test",
-			"issuer": "API",
-			"signature": "test",
-			"start_date_in_millis": 1629849600000
-		}
-	}
-	`
-	if err := t.k8sClient.Get(context.Background(), key, secret); err != nil {
-		t.T().Fatal(err)
-	}
-	secret.Data["license"] = []byte(licenseJson)
-	if err := t.k8sClient.Update(context.Background(), secret); err != nil {
-		t.T().Fatal(err)
-	}
-
-	isTimeout, err = RunWithTimeout(func() error {
-		fetched = &elkv1alpha1.License{}
-		if err := t.k8sClient.Get(context.Background(), key, fetched); err != nil {
-			t.T().Fatal(err)
-		}
-		if !isUpdated {
-			return errors.New("Not yet updated")
-		}
-		return nil
-	}, time.Second*30, time.Second*1)
-	if err != nil || isTimeout {
-		t.T().Fatalf("Failed to get License: %s", err.Error())
-	}
-	assert.NotEmpty(t.T(), fetched.Status.ExpireAt)
-	assert.NotEqual(t.T(), currentHash, fetched.Status.LicenseHash)
-	assert.Equal(t.T(), "gold", fetched.Status.LicenseType)
-	assert.True(t.T(), condition.IsStatusConditionPresentAndEqual(fetched.Status.Conditions, licenseCondition, metav1.ConditionTrue))
-	time.Sleep(10 * time.Second)
-
-	// When remove enterprise license
-	logrus.Info("==================================== When remove enterprise license")
-	test = "delete_enterprise_license"
-	isDeleted = false
-	if err = t.k8sClient.Delete(context.Background(), fetched, &client.DeleteOptions{GracePeriodSeconds: &wait}); err != nil {
-		t.T().Fatal(err)
-	}
-	isTimeout, err = RunWithTimeout(func() error {
-		if err = t.k8sClient.Get(context.Background(), key, fetched); err != nil {
-			if k8serrors.IsNotFound(err) {
+		mockES.EXPECT().LicenseUpdate(gomock.Any()).AnyTimes().DoAndReturn(func(license string) error {
+			switch *stepName {
+			case "update_to_enterprise_license":
+				data["isUpdatedToEnterpriseLicense"] = true
+				return nil
+			case "update_enterprise_license":
+				data["isUpdatedEnterpriseLicense"] = true
 				return nil
 			}
-			t.T().Fatal(err)
-		}
 
-		return errors.New("Not yet deleted")
-	}, time.Second*30, time.Second*1)
-	if err != nil || isTimeout {
-		t.T().Fatalf("License stil exist: %s", err.Error())
+			return nil
+		})
+
+		return nil
 	}
-	assert.True(t.T(), isDeleted)
+}
 
+func doEnableBasicLicenseStep() test.TestStep {
+	return test.TestStep{
+		Name: "create_basic_license",
+		Do: func(c client.Client, key types.NamespacedName, o client.Object, data map[string]any) (err error) {
+			logrus.Infof("=== Enable basic license %s/%s ===", key.Namespace, key.Name)
+
+			license := &elkv1alpha1.License{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      key.Name,
+					Namespace: key.Namespace,
+				},
+				Spec: elkv1alpha1.LicenseSpec{
+					ElasticsearchRefSpec: elkv1alpha1.ElasticsearchRefSpec{
+						Name: "test",
+					},
+					SecretName: key.Name,
+					Basic:      true,
+				},
+			}
+
+			if err = c.Create(context.Background(), license); err != nil {
+				return err
+			}
+
+			return nil
+		},
+		Check: func(t *testing.T, c client.Client, key types.NamespacedName, o client.Object, data map[string]any) (err error) {
+			license := &elkv1alpha1.License{}
+
+			isTimeout, err := RunWithTimeout(func() error {
+				if err := c.Get(context.Background(), key, license); err != nil {
+					t.Fatal(err)
+				}
+				if !condition.IsStatusConditionPresentAndEqual(license.Status.Conditions, licenseCondition, metav1.ConditionTrue) {
+					return errors.New("Not yet created")
+				}
+				return nil
+			}, time.Second*30, time.Second*1)
+			if err != nil || isTimeout {
+				t.Fatalf("Failed to get License: %s", err.Error())
+			}
+			assert.Empty(t, license.Status.ExpireAt)
+			assert.Empty(t, license.Status.LicenseHash)
+			assert.Equal(t, "basic", license.Status.LicenseType)
+			assert.True(t, condition.IsStatusConditionPresentAndEqual(license.Status.Conditions, licenseCondition, metav1.ConditionTrue))
+
+			return nil
+		},
+	}
+}
+
+func doDeleteBasicLicenseStep() test.TestStep {
+	return test.TestStep{
+		Name: "delete_basic_license",
+		Do: func(c client.Client, key types.NamespacedName, o client.Object, data map[string]any) (err error) {
+			logrus.Infof("=== Delete basic license %s/%s ===", key.Namespace, key.Name)
+
+			if o == nil {
+				return errors.New("License is null")
+			}
+			license := o.(*elkv1alpha1.License)
+
+			wait := int64(0)
+			if err = c.Delete(context.Background(), license, &client.DeleteOptions{GracePeriodSeconds: &wait}); err != nil {
+				return err
+			}
+
+			return nil
+		},
+		Check: func(t *testing.T, c client.Client, key types.NamespacedName, o client.Object, data map[string]any) (err error) {
+			license := &elkv1alpha1.License{}
+			isDeleted := true
+
+			isTimeout, err := RunWithTimeout(func() error {
+				if err = c.Get(context.Background(), key, license); err != nil {
+					if k8serrors.IsNotFound(err) {
+						isDeleted = true
+						return nil
+					}
+					t.Fatal(err)
+				}
+
+				return errors.New("Not yet deleted")
+			}, time.Second*30, time.Second*1)
+			if err != nil || isTimeout {
+				t.Fatalf("License stil exist: %s", err.Error())
+			}
+
+			assert.True(t, isDeleted)
+
+			return nil
+		},
+	}
+}
+
+func doUpdateToEnterpriseLicenseStep() test.TestStep {
+	return test.TestStep{
+		Name: "update_to_enterprise_license",
+		Do: func(c client.Client, key types.NamespacedName, o client.Object, data map[string]any) (err error) {
+			logrus.Infof("=== Update to enterprise %s/%s ===", key.Namespace, key.Name)
+
+			licenseJson := `
+			{
+				"license": {
+					"uid": "test",
+					"type": "gold",
+					"issue_date_in_millis": 1629849600000,
+					"expiry_date_in_millis": 1661990399999,
+					"max_nodes": 15,
+					"issued_to": "test",
+					"issuer": "API",
+					"signature": "test",
+					"start_date_in_millis": 1629849600000
+				}
+			}
+			`
+			secret := &core.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      key.Name,
+					Namespace: key.Namespace,
+				},
+				Data: map[string][]byte{
+					"license": []byte(licenseJson),
+				},
+			}
+			license := &elkv1alpha1.License{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      key.Name,
+					Namespace: key.Namespace,
+				},
+				Spec: elkv1alpha1.LicenseSpec{
+					ElasticsearchRefSpec: elkv1alpha1.ElasticsearchRefSpec{
+						Name: "test",
+					},
+					SecretName: key.Name,
+					Basic:      false,
+				},
+			}
+			if err = c.Create(context.Background(), secret); err != nil {
+				return err
+			}
+			if err = c.Create(context.Background(), license); err != nil {
+				return err
+			}
+
+			return nil
+		},
+		Check: func(t *testing.T, c client.Client, key types.NamespacedName, o client.Object, data map[string]any) (err error) {
+			license := &elkv1alpha1.License{}
+			secret := &core.Secret{}
+
+			isTimeout, err := RunWithTimeout(func() error {
+				if err := c.Get(context.Background(), key, license); err != nil {
+					t.Fatal(err)
+				}
+				if !condition.IsStatusConditionPresentAndEqual(license.Status.Conditions, licenseCondition, metav1.ConditionTrue) {
+					return errors.New("Not yet created")
+				}
+				return nil
+			}, time.Second*30, time.Second*1)
+			if err != nil || isTimeout {
+				t.Fatalf("Failed to get License: %s", err.Error())
+			}
+			assert.NotEmpty(t, license.Status.ExpireAt)
+			assert.NotEmpty(t, license.Status.LicenseHash)
+			assert.Equal(t, "gold", license.Status.LicenseType)
+			assert.True(t, condition.IsStatusConditionPresentAndEqual(license.Status.Conditions, licenseCondition, metav1.ConditionTrue))
+
+			// Check we add annotation on secret
+			if err := c.Get(context.Background(), key, secret); err != nil {
+				t.Fatal(err)
+			}
+			assert.Equal(t, key.Name, secret.Annotations[licenseAnnotation])
+			return nil
+		},
+	}
+}
+
+func doUpdateEnterpriseLicenseStep() test.TestStep {
+	return test.TestStep{
+		Name: "update_enterprise_license",
+		Do: func(c client.Client, key types.NamespacedName, o client.Object, data map[string]any) (err error) {
+			logrus.Infof("=== Update license %s/%s ===", key.Namespace, key.Name)
+
+			if o == nil {
+				return errors.New("License is null")
+			}
+			license := o.(*elkv1alpha1.License)
+			data["licenseHash"] = license.Status.LicenseHash
+
+			secret := &core.Secret{}
+
+			licenseJson := `
+			{
+				"license": {
+					"uid": "test2",
+					"type": "gold",
+					"issue_date_in_millis": 1629849600000,
+					"expiry_date_in_millis": 1661990399999,
+					"max_nodes": 15,
+					"issued_to": "test",
+					"issuer": "API",
+					"signature": "test",
+					"start_date_in_millis": 1629849600000
+				}
+			}
+			`
+			if err := c.Get(context.Background(), key, secret); err != nil {
+				return err
+			}
+			secret.Data["license"] = []byte(licenseJson)
+			if err := c.Update(context.Background(), secret); err != nil {
+				return err
+			}
+
+			return nil
+		},
+		Check: func(t *testing.T, c client.Client, key types.NamespacedName, o client.Object, data map[string]any) (err error) {
+			license := &elkv1alpha1.License{}
+			isUpdated := false
+
+			isTimeout, err := RunWithTimeout(func() error {
+				if err := c.Get(context.Background(), key, license); err != nil {
+					t.Fatal(err)
+				}
+				if b, ok := data["isUpdatedEnterpriseLicense"]; ok {
+					isUpdated = b.(bool)
+				}
+				if !isUpdated {
+					return errors.New("Not yet updated")
+				}
+				return nil
+			}, time.Second*30, time.Second*1)
+			if err != nil || isTimeout {
+				t.Fatalf("Failed to get License: %s", err.Error())
+			}
+			assert.NotEmpty(t, license.Status.ExpireAt)
+			assert.NotEqual(t, data["licenseHash"], license.Status.LicenseHash)
+			assert.Equal(t, "gold", license.Status.LicenseType)
+			assert.True(t, condition.IsStatusConditionPresentAndEqual(license.Status.Conditions, licenseCondition, metav1.ConditionTrue))
+
+			return nil
+		},
+	}
+}
+
+func doDeleteEnterpriseLicenseStep() test.TestStep {
+	return test.TestStep{
+		Name: "delete_enterprise_license",
+		Do: func(c client.Client, key types.NamespacedName, o client.Object, data map[string]any) (err error) {
+			logrus.Infof("=== Delete enterprise license %s/%s ===", key.Namespace, key.Name)
+
+			if o == nil {
+				return errors.New("License is null")
+			}
+			license := o.(*elkv1alpha1.License)
+
+			wait := int64(0)
+			if err = c.Delete(context.Background(), license, &client.DeleteOptions{GracePeriodSeconds: &wait}); err != nil {
+				return err
+			}
+
+			return nil
+		},
+		Check: func(t *testing.T, c client.Client, key types.NamespacedName, o client.Object, data map[string]any) (err error) {
+			license := &elkv1alpha1.License{}
+			isDeleted := false
+
+			isTimeout, err := RunWithTimeout(func() error {
+				if err = c.Get(context.Background(), key, license); err != nil {
+					if k8serrors.IsNotFound(err) {
+						isDeleted = true
+						return nil
+					}
+					t.Fatal(err)
+				}
+
+				return errors.New("Not yet deleted")
+			}, time.Second*30, time.Second*1)
+			if err != nil || isTimeout {
+				t.Fatalf("License stil exist: %s", err.Error())
+			}
+			assert.True(t, isDeleted)
+			return nil
+		},
+	}
 }

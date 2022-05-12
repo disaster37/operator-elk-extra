@@ -2,10 +2,13 @@ package controllers
 
 import (
 	"context"
+	"testing"
 	"time"
 
 	elkv1alpha1 "github.com/disaster37/operator-elk-extra/api/v1alpha1"
 	"github.com/disaster37/operator-elk-extra/pkg/helpers"
+	"github.com/disaster37/operator-elk-extra/pkg/mocks"
+	"github.com/disaster37/operator-sdk-extra/pkg/test"
 	"github.com/golang/mock/gomock"
 	olivere "github.com/olivere/elastic/v7"
 	"github.com/pkg/errors"
@@ -21,240 +24,304 @@ import (
 )
 
 func (t *ControllerTestSuite) TestUserReconciler() {
-
-	var (
-		err       error
-		isTimeout bool
-		fetched   *elkv1alpha1.User
-		test      string
-		isCreated bool
-		isDeleted bool
-		isUpdated bool
-	)
-
-	userName := "t-user-" + helpers.RandomString(10)
 	key := types.NamespacedName{
-		Name:      userName,
+		Name:      "t-user-" + helpers.RandomString(10),
 		Namespace: "default",
 	}
-	t.mockElasticsearchHandler.EXPECT().UserGet(gomock.Any()).AnyTimes().DoAndReturn(func(name string) (*olivere.XPackSecurityUser, error) {
+	user := &elkv1alpha1.User{}
+	data := map[string]any{}
 
-		switch test {
-		case "no_user":
-			if !isCreated {
-				return nil, nil
-			} else {
-				resp := &olivere.XPackSecurityUser{
-					Enabled: true,
-					Roles:   []string{"superuser"},
+	testCase := test.NewTestCase(t.T(), t.k8sClient, key, user, 5*time.Second, data)
+	testCase.Steps = []test.TestStep{
+		doCreateUserStep(),
+		doUpdateUserStep(),
+		doUpdateUserPasswordHashStep(),
+		doDeleteUserStep(),
+	}
+	testCase.PreTest = doMockUser(t.mockElasticsearchHandler)
+
+	testCase.Run()
+}
+
+func doMockUser(mockES *mocks.MockElasticsearchHandler) func(stepName *string, data map[string]any) error {
+	return func(stepName *string, data map[string]any) (err error) {
+		isCreated := false
+		isUpdated := false
+		isUpdatedPasswordHash := false
+
+		mockES.EXPECT().UserGet(gomock.Any()).AnyTimes().DoAndReturn(func(name string) (*olivere.XPackSecurityUser, error) {
+			switch *stepName {
+			case "create":
+				if !isCreated {
+					return nil, nil
+				} else {
+					resp := &olivere.XPackSecurityUser{
+						Enabled: true,
+						Roles:   []string{"superuser"},
+					}
+					return resp, nil
 				}
-				return resp, nil
-			}
-		case "user_update":
-			if !isUpdated {
-				resp := &olivere.XPackSecurityUser{
-					Enabled: true,
-					Roles:   []string{"superuser"},
+			case "update":
+				if !isUpdated {
+					resp := &olivere.XPackSecurityUser{
+						Enabled: true,
+						Roles:   []string{"superuser"},
+					}
+					return resp, nil
+				} else {
+					resp := &olivere.XPackSecurityUser{
+						Enabled: false,
+						Roles:   []string{"superuser"},
+					}
+					return resp, nil
 				}
-				return resp, nil
-			} else {
+			case "update_password_hash":
 				resp := &olivere.XPackSecurityUser{
 					Enabled: false,
 					Roles:   []string{"superuser"},
 				}
 				return resp, nil
+
 			}
-		case "user_update_password_hash":
-			resp := &olivere.XPackSecurityUser{
-				Enabled: false,
-				Roles:   []string{"superuser"},
+
+			return nil, nil
+		})
+
+		mockES.EXPECT().UserDiff(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(func(actual, expected *olivere.XPackSecurityPutUserRequest) (string, error) {
+			switch *stepName {
+			case "create":
+				if !isCreated {
+					return "fake change", nil
+				} else {
+					return "", nil
+				}
+			case "update":
+				if !isUpdated {
+					return "fake change", nil
+				} else {
+					return "", nil
+				}
+			case "update_password_hash":
+				if !isUpdatedPasswordHash {
+					return "fake change", nil
+				} else {
+					return "", nil
+				}
 			}
-			return resp, nil
 
-		}
+			return "", nil
+		})
 
-		return nil, nil
-
-	})
-	t.mockElasticsearchHandler.EXPECT().UserDiff(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(func(actual, expected *olivere.XPackSecurityPutUserRequest) (string, error) {
-		switch test {
-		case "no_user":
-			if !isCreated {
-				return "fake change", nil
-			} else {
-				return "", nil
-			}
-		case "user_update":
-			if !isUpdated {
-				return "fake change", nil
-			} else {
-				return "", nil
-			}
-		case "user_update_password_hash":
-			if !isUpdated {
-				return "fake change", nil
-			} else {
-				return "", nil
-			}
-		}
-
-		return "", nil
-
-	})
-	t.mockElasticsearchHandler.EXPECT().UserUpdate(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(func(name string, policy *olivere.XPackSecurityPutUserRequest) error {
-		switch test {
-		case "no_user":
-			isCreated = true
-			return nil
-		case "user_update":
-			isUpdated = true
-			return nil
-		case "user_update_password_hash":
-			isUpdated = true
-			return nil
-		}
-
-		return nil
-	})
-	t.mockElasticsearchHandler.EXPECT().UserCreate(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(func(name string, policy *olivere.XPackSecurityPutUserRequest) error {
-		switch test {
-		case "no_user":
-			isCreated = true
-			return nil
-		case "user_update":
-			isUpdated = true
-			return nil
-		}
-
-		return nil
-	})
-	t.mockElasticsearchHandler.EXPECT().UserDelete(gomock.Any()).AnyTimes().DoAndReturn(func(name string) error {
-		switch test {
-		case "user_delete":
-			isDeleted = true
-			return nil
-		}
-
-		return nil
-	})
-
-	// When add new user
-	logrus.Info("==================================== When add new user")
-	test = "no_user"
-	toCreate := &elkv1alpha1.User{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      key.Name,
-			Namespace: key.Namespace,
-		},
-		Spec: elkv1alpha1.UserSpec{
-			ElasticsearchRefSpec: elkv1alpha1.ElasticsearchRefSpec{
-				Name: "test",
-			},
-			Enabled:      true,
-			Roles:        []string{"superuser"},
-			PasswordHash: "test",
-		},
-	}
-	if err = t.k8sClient.Create(context.Background(), toCreate); err != nil {
-		t.T().Fatal(err)
-	}
-
-	isTimeout, err = RunWithTimeout(func() error {
-		fetched = &elkv1alpha1.User{}
-		if err := t.k8sClient.Get(context.Background(), key, fetched); err != nil {
-			t.T().Fatal(err)
-		}
-		if !isCreated {
-			return errors.New("Not yet created")
-		}
-		return nil
-	}, time.Second*30, time.Second*1)
-	if err != nil || isTimeout {
-		t.T().Fatalf("Failed to get user: %s", err.Error())
-	}
-	assert.True(t.T(), condition.IsStatusConditionPresentAndEqual(fetched.Status.Conditions, userCondition, metav1.ConditionTrue))
-	time.Sleep(10 * time.Second)
-
-	// When update user
-	logrus.Info("==================================== When update user")
-	test = "user_update"
-	isUpdated = false
-	fetched = &elkv1alpha1.User{}
-	if err := t.k8sClient.Get(context.Background(), key, fetched); err != nil {
-		t.T().Fatal(err)
-	}
-	fetched.Spec.Enabled = false
-	if err = t.k8sClient.Update(context.Background(), fetched); err != nil {
-		t.T().Fatal(err)
-	}
-
-	isTimeout, err = RunWithTimeout(func() error {
-		fetched = &elkv1alpha1.User{}
-		if err := t.k8sClient.Get(context.Background(), key, fetched); err != nil {
-			t.T().Fatal(err)
-		}
-		if !isUpdated {
-			return errors.New("Not yet updated")
-		}
-		return nil
-	}, time.Second*30, time.Second*1)
-	if err != nil || isTimeout {
-		t.T().Fatalf("Failed to get User: %s", err.Error())
-	}
-	assert.True(t.T(), condition.IsStatusConditionPresentAndEqual(fetched.Status.Conditions, userCondition, metav1.ConditionTrue))
-	time.Sleep(10 * time.Second)
-
-	// When change password hash
-	logrus.Info("==================================== When update user")
-	test = "user_update_password_hash"
-	isUpdated = false
-	fetched = &elkv1alpha1.User{}
-	if err := t.k8sClient.Get(context.Background(), key, fetched); err != nil {
-		t.T().Fatal(err)
-	}
-	fetched.Spec.PasswordHash = "test2"
-	if err = t.k8sClient.Update(context.Background(), fetched); err != nil {
-		t.T().Fatal(err)
-	}
-
-	isTimeout, err = RunWithTimeout(func() error {
-		fetched = &elkv1alpha1.User{}
-		if err := t.k8sClient.Get(context.Background(), key, fetched); err != nil {
-			t.T().Fatal(err)
-		}
-		if !isUpdated {
-			return errors.New("Not yet updated")
-		}
-		return nil
-	}, time.Second*30, time.Second*1)
-	if err != nil || isTimeout {
-		t.T().Fatalf("Failed to get User: %s", err.Error())
-	}
-	assert.True(t.T(), condition.IsStatusConditionPresentAndEqual(fetched.Status.Conditions, userCondition, metav1.ConditionTrue))
-	time.Sleep(10 * time.Second)
-
-	// When remove user
-	logrus.Info("==================================== When remove user")
-	test = "user_delete"
-	wait := int64(0)
-	isDeleted = false
-	if err = t.k8sClient.Delete(context.Background(), fetched, &client.DeleteOptions{GracePeriodSeconds: &wait}); err != nil {
-		t.T().Fatal(err)
-	}
-	isTimeout, err = RunWithTimeout(func() error {
-		if err = t.k8sClient.Get(context.Background(), key, fetched); err != nil {
-			if k8serrors.IsNotFound(err) {
+		mockES.EXPECT().UserUpdate(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(func(name string, policy *olivere.XPackSecurityPutUserRequest) error {
+			switch *stepName {
+			case "update":
+				isUpdated = true
+				data["isUpdated"] = true
+				return nil
+			case "update_password_hash":
+				isUpdatedPasswordHash = true
+				data["isUpdatedPasswordHash"] = true
 				return nil
 			}
-			t.T().Fatal(err)
-		}
 
-		return errors.New("Not yet deleted")
-	}, time.Second*30, time.Second*1)
-	if err != nil || isTimeout {
-		t.T().Fatalf("user stil exist: %s", err.Error())
+			return nil
+		})
+
+		mockES.EXPECT().UserCreate(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(func(name string, policy *olivere.XPackSecurityPutUserRequest) error {
+			isCreated = true
+			data["isCreated"] = true
+
+			return nil
+		})
+
+		mockES.EXPECT().UserDelete(gomock.Any()).AnyTimes().DoAndReturn(func(name string) error {
+			data["isDeleted"] = true
+			return nil
+		})
+
+		return nil
 	}
-	assert.True(t.T(), isDeleted)
-	time.Sleep(10 * time.Second)
+}
 
+func doCreateUserStep() test.TestStep {
+	return test.TestStep{
+		Name: "create",
+		Do: func(c client.Client, key types.NamespacedName, o client.Object, data map[string]any) (err error) {
+			logrus.Infof("=== Add new user %s/%s ===", key.Namespace, key.Name)
+
+			user := &elkv1alpha1.User{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      key.Name,
+					Namespace: key.Namespace,
+				},
+				Spec: elkv1alpha1.UserSpec{
+					ElasticsearchRefSpec: elkv1alpha1.ElasticsearchRefSpec{
+						Name: "test",
+					},
+					Enabled:      true,
+					Roles:        []string{"superuser"},
+					PasswordHash: "test",
+				},
+			}
+			if err = c.Create(context.Background(), user); err != nil {
+				return err
+			}
+
+			return nil
+		},
+		Check: func(t *testing.T, c client.Client, key types.NamespacedName, o client.Object, data map[string]any) (err error) {
+			user := &elkv1alpha1.User{}
+			isCreated := false
+
+			isTimeout, err := RunWithTimeout(func() error {
+				if err := c.Get(context.Background(), key, user); err != nil {
+					t.Fatal(err)
+				}
+				if b, ok := data["isCreated"]; ok {
+					isCreated = b.(bool)
+				}
+				if !isCreated {
+					return errors.New("Not yet created")
+				}
+				return nil
+			}, time.Second*30, time.Second*1)
+			if err != nil || isTimeout {
+				t.Fatalf("Failed to get user: %s", err.Error())
+			}
+			assert.True(t, condition.IsStatusConditionPresentAndEqual(user.Status.Conditions, userCondition, metav1.ConditionTrue))
+
+			return nil
+		},
+	}
+}
+
+func doUpdateUserStep() test.TestStep {
+	return test.TestStep{
+		Name: "update",
+		Do: func(c client.Client, key types.NamespacedName, o client.Object, data map[string]any) (err error) {
+			logrus.Infof("=== Update user %s/%s ===", key.Namespace, key.Name)
+
+			if o == nil {
+				return errors.New("User is null")
+			}
+			user := o.(*elkv1alpha1.User)
+
+			user.Spec.Enabled = false
+			if err = c.Update(context.Background(), user); err != nil {
+				return err
+			}
+
+			return nil
+		},
+		Check: func(t *testing.T, c client.Client, key types.NamespacedName, o client.Object, data map[string]any) (err error) {
+			user := &elkv1alpha1.User{}
+			isUpdated := false
+
+			isTimeout, err := RunWithTimeout(func() error {
+				if err := c.Get(context.Background(), key, user); err != nil {
+					t.Fatal(err)
+				}
+				if b, ok := data["isUpdated"]; ok {
+					isUpdated = b.(bool)
+				}
+				if !isUpdated {
+					return errors.New("Not yet updated")
+				}
+				return nil
+			}, time.Second*30, time.Second*1)
+			if err != nil || isTimeout {
+				t.Fatalf("Failed to get User: %s", err.Error())
+			}
+			assert.True(t, condition.IsStatusConditionPresentAndEqual(user.Status.Conditions, userCondition, metav1.ConditionTrue))
+
+			return nil
+		},
+	}
+}
+
+func doUpdateUserPasswordHashStep() test.TestStep {
+	return test.TestStep{
+		Name: "update_password_hash",
+		Do: func(c client.Client, key types.NamespacedName, o client.Object, data map[string]any) (err error) {
+			logrus.Infof("=== Update user (password hash) %s/%s ===", key.Namespace, key.Name)
+
+			if o == nil {
+				return errors.New("User is null")
+			}
+			user := o.(*elkv1alpha1.User)
+
+			user.Spec.PasswordHash = "test2"
+			if err = c.Update(context.Background(), user); err != nil {
+				return err
+			}
+
+			return nil
+		},
+		Check: func(t *testing.T, c client.Client, key types.NamespacedName, o client.Object, data map[string]any) (err error) {
+			user := &elkv1alpha1.User{}
+			isUpdated := false
+
+			isTimeout, err := RunWithTimeout(func() error {
+				if err := c.Get(context.Background(), key, user); err != nil {
+					t.Fatal(err)
+				}
+				if b, ok := data["isUpdatedPasswordHash"]; ok {
+					isUpdated = b.(bool)
+				}
+				if !isUpdated {
+					return errors.New("Not yet updated")
+				}
+				return nil
+			}, time.Second*30, time.Second*1)
+			if err != nil || isTimeout {
+				t.Fatalf("Failed to get User: %s", err.Error())
+			}
+			assert.True(t, condition.IsStatusConditionPresentAndEqual(user.Status.Conditions, userCondition, metav1.ConditionTrue))
+
+			return nil
+		},
+	}
+}
+
+func doDeleteUserStep() test.TestStep {
+	return test.TestStep{
+		Name: "delete",
+		Do: func(c client.Client, key types.NamespacedName, o client.Object, data map[string]any) (err error) {
+			logrus.Infof("=== Delete user %s/%s ===", key.Namespace, key.Name)
+
+			if o == nil {
+				return errors.New("User is null")
+			}
+			user := o.(*elkv1alpha1.User)
+
+			wait := int64(0)
+			if err = c.Delete(context.Background(), user, &client.DeleteOptions{GracePeriodSeconds: &wait}); err != nil {
+				return err
+			}
+
+			return nil
+		},
+		Check: func(t *testing.T, c client.Client, key types.NamespacedName, o client.Object, data map[string]any) (err error) {
+			user := &elkv1alpha1.User{}
+			isDeleted := false
+
+			isTimeout, err := RunWithTimeout(func() error {
+				if err = c.Get(context.Background(), key, user); err != nil {
+					if k8serrors.IsNotFound(err) {
+						isDeleted = true
+						return nil
+					}
+					t.Fatal(err)
+				}
+
+				return errors.New("Not yet deleted")
+			}, time.Second*30, time.Second*1)
+			if err != nil || isTimeout {
+				t.Fatalf("user stil exist: %s", err.Error())
+			}
+			assert.True(t, isDeleted)
+
+			return nil
+		},
+	}
 }

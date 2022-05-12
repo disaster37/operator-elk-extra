@@ -3,11 +3,14 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"testing"
 	"time"
 
 	elkv1alpha1 "github.com/disaster37/operator-elk-extra/api/v1alpha1"
 	"github.com/disaster37/operator-elk-extra/pkg/elasticsearchhandler"
 	"github.com/disaster37/operator-elk-extra/pkg/helpers"
+	"github.com/disaster37/operator-elk-extra/pkg/mocks"
+	"github.com/disaster37/operator-sdk-extra/pkg/test"
 	"github.com/golang/mock/gomock"
 	olivere "github.com/olivere/elastic/v7"
 	"github.com/pkg/errors"
@@ -15,7 +18,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	//core "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	condition "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,244 +25,300 @@ import (
 )
 
 func (t *ControllerTestSuite) TestElasticsearchSLMReconciler() {
-
-	var (
-		err       error
-		isTimeout bool
-		fetched   *elkv1alpha1.ElasticsearchSLM
-		test      string
-		isCreated bool
-		isDeleted bool
-		isUpdated bool
-	)
-
-	slmName := "t-slm-" + helpers.RandomString(10)
 	key := types.NamespacedName{
-		Name:      slmName,
+		Name:      "t-slm-" + helpers.RandomString(10),
 		Namespace: "default",
 	}
-	t.mockElasticsearchHandler.EXPECT().SnapshotRepositoryGet(gomock.Any()).AnyTimes().Return(&olivere.SnapshotRepositoryMetaData{
-		Type: "url",
-	}, nil)
-	t.mockElasticsearchHandler.EXPECT().SLMGet(gomock.Any()).AnyTimes().DoAndReturn(func(name string) (*elasticsearchhandler.SnapshotLifecyclePolicySpec, error) {
+	slm := &elkv1alpha1.ElasticsearchSLM{}
+	data := map[string]any{}
 
-		switch test {
-		case "no_slm":
-			if !isCreated {
-				return nil, nil
-			} else {
-				rawPolicy := `
-				{
-					"schedule": "0 30 1 * * ?", 
-					"name": "<daily-snap-{now/d}>", 
-					"repository": "my_repository", 
-					"config": { 
-					  "indices": ["data-*", "important"], 
-					  "ignore_unavailable": false,
-					  "include_global_state": false
-					},
-					"retention": { 
-					  "expire_after": "30d", 
-					  "min_count": 5, 
-					  "max_count": 50 
+	testCase := test.NewTestCase(t.T(), t.k8sClient, key, slm, 5*time.Second, data)
+	testCase.Steps = []test.TestStep{
+		doCreateSLMStep(),
+		doUpdateSLMStep(),
+		doDeleteSLMStep(),
+	}
+	testCase.PreTest = doMockSLM(t.mockElasticsearchHandler)
+
+	testCase.Run()
+}
+
+func doMockSLM(mockES *mocks.MockElasticsearchHandler) func(stepName *string, data map[string]any) error {
+	return func(stepName *string, data map[string]any) (err error) {
+		isCreated := false
+		isUpdated := false
+
+		mockES.EXPECT().SnapshotRepositoryGet(gomock.Any()).AnyTimes().Return(&olivere.SnapshotRepositoryMetaData{
+			Type: "url",
+		}, nil)
+
+		mockES.EXPECT().SLMGet(gomock.Any()).AnyTimes().DoAndReturn(func(name string) (*elasticsearchhandler.SnapshotLifecyclePolicySpec, error) {
+
+			switch *stepName {
+			case "create":
+				if !isCreated {
+					return nil, nil
+				} else {
+					rawPolicy := `
+					{
+						"schedule": "0 30 1 * * ?",
+						"name": "<daily-snap-{now/d}>",
+						"repository": "my_repository",
+						"config": {
+						  "indices": ["data-*", "important"],
+						  "ignore_unavailable": false,
+						  "include_global_state": false
+						},
+						"retention": {
+						  "expire_after": "30d",
+						  "min_count": 5,
+						  "max_count": 50
+						}
+					}`
+					resp := &elasticsearchhandler.SnapshotLifecyclePolicySpec{}
+					if err := json.Unmarshal([]byte(rawPolicy), resp); err != nil {
+						panic(err)
 					}
-				}`
-				resp := &elasticsearchhandler.SnapshotLifecyclePolicySpec{}
-				if err := json.Unmarshal([]byte(rawPolicy), resp); err != nil {
-					t.T().Fatal(err)
+					return resp, nil
 				}
-				return resp, nil
-			}
-		case "slm_update":
-			if !isUpdated {
-				rawPolicy := `
-				{
-					"schedule": "0 30 1 * * ?", 
-					"name": "<daily-snap-{now/d}>", 
-					"repository": "my_repository", 
-					"config": { 
-					  "indices": ["data-*", "important"], 
-					  "ignore_unavailable": false,
-					  "include_global_state": false
-					},
-					"retention": { 
-					  "expire_after": "30d", 
-					  "min_count": 5, 
-					  "max_count": 50 
+			case "update":
+				if !isUpdated {
+					rawPolicy := `
+					{
+						"schedule": "0 30 1 * * ?",
+						"name": "<daily-snap-{now/d}>",
+						"repository": "my_repository",
+						"config": {
+						  "indices": ["data-*", "important"],
+						  "ignore_unavailable": false,
+						  "include_global_state": false
+						},
+						"retention": {
+						  "expire_after": "30d",
+						  "min_count": 5,
+						  "max_count": 50
+						}
+					}`
+					resp := &elasticsearchhandler.SnapshotLifecyclePolicySpec{}
+					if err := json.Unmarshal([]byte(rawPolicy), resp); err != nil {
+						panic(err)
 					}
-				}`
-				resp := &elasticsearchhandler.SnapshotLifecyclePolicySpec{}
-				if err := json.Unmarshal([]byte(rawPolicy), resp); err != nil {
-					t.T().Fatal(err)
-				}
-				return resp, nil
-			} else {
-				rawPolicy := `
-				{
-					"schedule": "0 30 1 * * ?", 
-					"name": "<daily-snap-{now/d}>", 
-					"repository": "my_repository", 
-					"config": { 
-					  "indices": ["data-*", "important"], 
-					  "ignore_unavailable": false,
-					  "include_global_state": false
-					},
-					"retention": { 
-					  "expire_after": "30d", 
-					  "min_count": 6, 
-					  "max_count": 50 
+					return resp, nil
+				} else {
+					rawPolicy := `
+					{
+						"schedule": "0 30 1 * * ?",
+						"name": "<daily-snap-{now/d}>",
+						"repository": "my_repository",
+						"config": {
+						  "indices": ["data-*", "important"],
+						  "ignore_unavailable": false,
+						  "include_global_state": false
+						},
+						"retention": {
+						  "expire_after": "30d",
+						  "min_count": 6,
+						  "max_count": 50
+						}
+					}`
+					resp := &elasticsearchhandler.SnapshotLifecyclePolicySpec{}
+					if err := json.Unmarshal([]byte(rawPolicy), resp); err != nil {
+						panic(err)
 					}
-				}`
-				resp := &elasticsearchhandler.SnapshotLifecyclePolicySpec{}
-				if err := json.Unmarshal([]byte(rawPolicy), resp); err != nil {
-					t.T().Fatal(err)
+					return resp, nil
 				}
-				return resp, nil
 			}
-		}
 
-		return nil, nil
+			return nil, nil
+		})
 
-	})
-	t.mockElasticsearchHandler.EXPECT().SLMDiff(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(func(actual, expected *elasticsearchhandler.SnapshotLifecyclePolicySpec) (string, error) {
-		switch test {
-		case "no_slm":
-			if !isCreated {
-				return "fake change", nil
-			} else {
-				return "", nil
+		mockES.EXPECT().SLMDiff(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(func(actual, expected *elasticsearchhandler.SnapshotLifecyclePolicySpec) (string, error) {
+			switch *stepName {
+			case "create":
+				if !isCreated {
+					return "fake change", nil
+				} else {
+					return "", nil
+				}
+			case "update":
+				if !isUpdated {
+					return "fake change", nil
+				} else {
+					return "", nil
+				}
 			}
-		case "slm_update":
-			if !isUpdated {
-				return "fake change", nil
-			} else {
-				return "", nil
-			}
-		}
 
-		return "", nil
+			return "", nil
+		})
 
-	})
-	t.mockElasticsearchHandler.EXPECT().SLMUpdate(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(func(name string, policy *elasticsearchhandler.SnapshotLifecyclePolicySpec) error {
-		switch test {
-		case "no_slm":
-			isCreated = true
-			return nil
-		case "slm_update":
-			isUpdated = true
-			return nil
-		}
-
-		return nil
-	})
-	t.mockElasticsearchHandler.EXPECT().SLMDelete(gomock.Any()).AnyTimes().DoAndReturn(func(name string) error {
-		switch test {
-		case "slm_delete":
-			isDeleted = true
-			return nil
-		}
-
-		return nil
-	})
-
-	// When add new SLM policy
-	logrus.Info("==================================== When add new SLM policy")
-	test = "no_slm"
-	toCreate := &elkv1alpha1.ElasticsearchSLM{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      key.Name,
-			Namespace: key.Namespace,
-		},
-		Spec: elkv1alpha1.ElasticsearchSLMSpec{
-			ElasticsearchRefSpec: elkv1alpha1.ElasticsearchRefSpec{
-				Name: "test",
-			},
-			Schedule:   "0 30 1 * * ?",
-			Name:       "<daily-snap-{now/d}>",
-			Repository: "my_repository",
-			Config: elkv1alpha1.ElasticsearchSLMConfig{
-				Indices:            []string{"data-*", "important"},
-				IgnoreUnavailable:  false,
-				IncludeGlobalState: false,
-			},
-			Retention: &elkv1alpha1.ElasticsearchSLMRetention{
-				ExpireAfter: "30d",
-				MinCount:    5,
-				MaxCount:    50,
-			},
-		},
-	}
-	if err = t.k8sClient.Create(context.Background(), toCreate); err != nil {
-		t.T().Fatal(err)
-	}
-
-	isTimeout, err = RunWithTimeout(func() error {
-		fetched = &elkv1alpha1.ElasticsearchSLM{}
-		if err := t.k8sClient.Get(context.Background(), key, fetched); err != nil {
-			t.T().Fatal(err)
-		}
-		if !isCreated {
-			return errors.New("Not yet created")
-		}
-		return nil
-	}, time.Second*30, time.Second*1)
-	if err != nil || isTimeout {
-		t.T().Fatalf("Failed to get SLM: %s", err.Error())
-	}
-	assert.True(t.T(), condition.IsStatusConditionPresentAndEqual(fetched.Status.Conditions, slmCondition, metav1.ConditionTrue))
-	time.Sleep(10 * time.Second)
-
-	// When update SLM policy
-	logrus.Info("==================================== When update SLM policy")
-	test = "slm_update"
-	isUpdated = false
-	fetched = &elkv1alpha1.ElasticsearchSLM{}
-	if err := t.k8sClient.Get(context.Background(), key, fetched); err != nil {
-		t.T().Fatal(err)
-	}
-	fetched.Spec.Retention.MinCount = 6
-	if err = t.k8sClient.Update(context.Background(), fetched); err != nil {
-		t.T().Fatal(err)
-	}
-
-	isTimeout, err = RunWithTimeout(func() error {
-		fetched = &elkv1alpha1.ElasticsearchSLM{}
-		if err := t.k8sClient.Get(context.Background(), key, fetched); err != nil {
-			t.T().Fatal(err)
-		}
-		if !isUpdated {
-			return errors.New("Not yet updated")
-		}
-		return nil
-	}, time.Second*30, time.Second*1)
-	if err != nil || isTimeout {
-		t.T().Fatalf("Failed to get SLM: %s", err.Error())
-	}
-	assert.True(t.T(), condition.IsStatusConditionPresentAndEqual(fetched.Status.Conditions, slmCondition, metav1.ConditionTrue))
-	time.Sleep(10 * time.Second)
-
-	// When remove slm policy
-	logrus.Info("==================================== When remove SLM policy")
-	test = "slm_delete"
-	wait := int64(0)
-	isDeleted = false
-	if err = t.k8sClient.Delete(context.Background(), fetched, &client.DeleteOptions{GracePeriodSeconds: &wait}); err != nil {
-		t.T().Fatal(err)
-	}
-	isTimeout, err = RunWithTimeout(func() error {
-		if err = t.k8sClient.Get(context.Background(), key, fetched); err != nil {
-			if k8serrors.IsNotFound(err) {
+		mockES.EXPECT().SLMUpdate(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(func(name string, policy *elasticsearchhandler.SnapshotLifecyclePolicySpec) error {
+			switch *stepName {
+			case "create":
+				isCreated = true
+				data["isCreated"] = true
+				return nil
+			case "update":
+				isUpdated = true
+				data["isUpdated"] = true
 				return nil
 			}
-			t.T().Fatal(err)
-		}
 
-		return errors.New("Not yet deleted")
-	}, time.Second*30, time.Second*1)
-	if err != nil || isTimeout {
-		t.T().Fatalf("SLM stil exist: %s", err.Error())
+			return nil
+		})
+
+		mockES.EXPECT().SLMDelete(gomock.Any()).AnyTimes().DoAndReturn(func(name string) error {
+			data["isDeleted"] = true
+			return nil
+		})
+
+		return nil
 	}
-	assert.True(t.T(), isDeleted)
-	time.Sleep(10 * time.Second)
+}
 
+func doCreateSLMStep() test.TestStep {
+	return test.TestStep{
+		Name: "create",
+		Do: func(c client.Client, key types.NamespacedName, o client.Object, data map[string]any) (err error) {
+			logrus.Infof("=== Add new SLM policy %s/%s ===", key.Namespace, key.Name)
+
+			slm := &elkv1alpha1.ElasticsearchSLM{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      key.Name,
+					Namespace: key.Namespace,
+				},
+				Spec: elkv1alpha1.ElasticsearchSLMSpec{
+					ElasticsearchRefSpec: elkv1alpha1.ElasticsearchRefSpec{
+						Name: "test",
+					},
+					Schedule:   "0 30 1 * * ?",
+					Name:       "<daily-snap-{now/d}>",
+					Repository: "my_repository",
+					Config: elkv1alpha1.ElasticsearchSLMConfig{
+						Indices:            []string{"data-*", "important"},
+						IgnoreUnavailable:  false,
+						IncludeGlobalState: false,
+					},
+					Retention: &elkv1alpha1.ElasticsearchSLMRetention{
+						ExpireAfter: "30d",
+						MinCount:    5,
+						MaxCount:    50,
+					},
+				},
+			}
+			if err = c.Create(context.Background(), slm); err != nil {
+				return err
+			}
+
+			return nil
+		},
+		Check: func(t *testing.T, c client.Client, key types.NamespacedName, o client.Object, data map[string]any) (err error) {
+			slm := &elkv1alpha1.ElasticsearchSLM{}
+			isCreated := true
+
+			isTimeout, err := RunWithTimeout(func() error {
+				if err := c.Get(context.Background(), key, slm); err != nil {
+					t.Fatal(err)
+				}
+				if b, ok := data["isCreated"]; ok {
+					isCreated = b.(bool)
+				}
+				if !isCreated {
+					return errors.New("Not yet created")
+				}
+				return nil
+			}, time.Second*30, time.Second*1)
+			if err != nil || isTimeout {
+				t.Fatalf("Failed to get SLM: %s", err.Error())
+			}
+			assert.True(t, condition.IsStatusConditionPresentAndEqual(slm.Status.Conditions, slmCondition, metav1.ConditionTrue))
+
+			return nil
+		},
+	}
+}
+
+func doUpdateSLMStep() test.TestStep {
+	return test.TestStep{
+		Name: "update",
+		Do: func(c client.Client, key types.NamespacedName, o client.Object, data map[string]any) (err error) {
+			logrus.Infof("=== Update SLM policy %s/%s ===", key.Namespace, key.Name)
+
+			if o == nil {
+				return errors.New("SLM is null")
+			}
+			slm := o.(*elkv1alpha1.ElasticsearchSLM)
+
+			slm.Spec.Retention.MinCount = 6
+			if err = c.Update(context.Background(), slm); err != nil {
+				return err
+			}
+
+			return nil
+		},
+		Check: func(t *testing.T, c client.Client, key types.NamespacedName, o client.Object, data map[string]any) (err error) {
+			slm := &elkv1alpha1.ElasticsearchSLM{}
+			isUpdated := true
+
+			isTimeout, err := RunWithTimeout(func() error {
+				if err := c.Get(context.Background(), key, slm); err != nil {
+					t.Fatal(err)
+				}
+				if b, ok := data["isUpdated"]; ok {
+					isUpdated = b.(bool)
+				}
+				if !isUpdated {
+					return errors.New("Not yet updated")
+				}
+				return nil
+			}, time.Second*30, time.Second*1)
+			if err != nil || isTimeout {
+				t.Fatalf("Failed to get SLM: %s", err.Error())
+			}
+			assert.True(t, condition.IsStatusConditionPresentAndEqual(slm.Status.Conditions, slmCondition, metav1.ConditionTrue))
+
+			return nil
+		},
+	}
+}
+
+func doDeleteSLMStep() test.TestStep {
+	return test.TestStep{
+		Name: "delete",
+		Do: func(c client.Client, key types.NamespacedName, o client.Object, data map[string]any) (err error) {
+			logrus.Infof("=== Delete SLM policy %s/%s ===", key.Namespace, key.Name)
+
+			if o == nil {
+				return errors.New("SLM is null")
+			}
+			slm := o.(*elkv1alpha1.ElasticsearchSLM)
+
+			wait := int64(0)
+			if err = c.Delete(context.Background(), slm, &client.DeleteOptions{GracePeriodSeconds: &wait}); err != nil {
+				return err
+			}
+			return nil
+		},
+		Check: func(t *testing.T, c client.Client, key types.NamespacedName, o client.Object, data map[string]any) (err error) {
+			slm := &elkv1alpha1.ElasticsearchSLM{}
+			isDeleted := true
+
+			isTimeout, err := RunWithTimeout(func() error {
+				if err = c.Get(context.Background(), key, slm); err != nil {
+					if k8serrors.IsNotFound(err) {
+						isDeleted = true
+						return nil
+					}
+					t.Fatal(err)
+				}
+
+				return errors.New("Not yet deleted")
+			}, time.Second*30, time.Second*1)
+			if err != nil || isTimeout {
+				t.Fatalf("SLM stil exist: %s", err.Error())
+			}
+			assert.True(t, isDeleted)
+
+			return nil
+		},
+	}
 }
